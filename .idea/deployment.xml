@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" autoUpload="Always" serverName="bertozzilab2@128.97.19.152:22 (7)">
+    <serverData>
+      <paths name="bertozzilab2@128.97.19.152:22 (7)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/Documents/Hedi/HeavyBallNODE" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="hedixia@128.97.19.149:22">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+    </serverData>
+    <option name="myAutoUpload" value="ALWAYS" />
+  </component>
+</project>
