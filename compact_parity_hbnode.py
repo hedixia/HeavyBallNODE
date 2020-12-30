@@ -7,18 +7,13 @@ import torch.optim as optim
 from base import *
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--tol', type=float, default=1e-1)
+parser.add_argument('--tol', type=float, default=1e-2)
 parser.add_argument('--adjoint', type=eval, default=False)
 parser.add_argument('--visualize', type=eval, default=True)
 parser.add_argument('--niters', type=int, default=500)
 parser.add_argument('--lr', type=float, default=0.01)
 parser.add_argument('--gpu', type=int, default=0)
 args = parser.parse_args()
-
-if args.adjoint:
-    from torchdiffeq import odeint_adjoint as odeint
-else:
-    from torchdiffeq import odeint
 
 
 class initial_velocity(nn.Module):
@@ -71,7 +66,7 @@ if __name__ == '__main__':
     tarr = torch.tensor([t0, tN])
     dim = 1
     nhid = 10
-    model = NODEintegrate(HeavyBallODE(DF(dim, nhid), 0.1), initial_velocity(dim, nhid))
+    model = NODEintegrate(HeavyBallODE(DF(dim, nhid), nn.Parameter(torch.tensor([0.0]))), initial_velocity(dim, nhid))
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     loss_func = nn.MSELoss()
 

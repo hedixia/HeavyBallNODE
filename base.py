@@ -86,15 +86,15 @@ class HeavyBallODE(NODE):
         $$ m' = h f'(theta) - rm $$
         $$ v' = p (f'(theta))^2 - qv $$
         https://www.jmlr.org/papers/volume21/18-808/18-808.pdf
-        because v is constant, we change v -> 1/sqrt(v)
-        v has to be non-negative
+        because v is constant, we change c -> 1/sqrt(v)
+        c has to be positive
         :param t: time, shape [1]
         :param x: [theta m v], shape [batch, 3, dim]
         :return: [theta' m' v'], shape [batch, 3, dim]
         """
-        theta, m, v = torch.split(x, 1, dim=1)
-        dtheta = - m * v
-        dm = self.df(t, theta) - self.gamma * m
-        dv = 0 * v
         self.nfe += 1
-        return torch.cat((dtheta, dm, dv), dim=1)
+        theta, m, c = torch.split(x, 1, dim=1)
+        dtheta = - m * c
+        dm = self.df(t, theta) - torch.sigmoid(self.gamma) * m
+        dc = 0 * c
+        return torch.cat((dtheta, dm, dc), dim=1)
