@@ -3,13 +3,7 @@
   <component name="RemoteMappingsManager">
     <list>
       <list>
-        <remote-mappings server-id="python@sftp://bertozzilab2@128.97.19.152:22/home/bertozzilab2/anaconda3/envs/hgcn/bin/python3.6">
-          <settings>
-            <list>
-              <mapping local-root="$PROJECT_DIR$" remote-root="/home/bertozzilab2/Documents/Hedi" />
-            </list>
-          </settings>
-        </remote-mappings>
+        <remote-mappings server-id="python@sftp://bertozzilab2@128.97.19.152:22/home/bertozzilab2/anaconda3/envs/hgcn/bin/python3.6" />
       </list>
     </list>
   </component>
