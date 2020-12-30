@@ -44,6 +44,10 @@ class NODEintegrate(nn.Module):
         out = odeint(self.df, initial_condition, evaluation_times, rtol=tol, atol=tol)
         return out
 
+    @property
+    def nfe(self):
+        return self.df.nfe
+
 
 class NODE(nn.Module):
     def __init__(self, df=None, **kwargs):
@@ -92,4 +96,5 @@ class HeavyBallODE(NODE):
         dtheta = - m * v
         dm = self.df(t, theta) - self.gamma * m
         dv = 0 * v
+        self.nfe += 1
         return torch.cat((dtheta, dm, dv), dim=1)
