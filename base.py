@@ -1,6 +1,7 @@
 from misc import *
 
-class Example_df (nn.Module):
+
+class Example_df(nn.Module):
     def __init__(self, input_dim, output_dim, nhid=20):
         super(Example_df, self).__init__()
         self.dense1 = nn.Linear(input_dim, nhid)
@@ -12,6 +13,7 @@ class Example_df (nn.Module):
         x = self.lrelu(x)
         x = self.dense2(x)
         return x
+
 
 class NODEintegrate(nn.Module):
 
@@ -49,6 +51,17 @@ class NODEintegrate(nn.Module):
         return self.df.nfe
 
 
+class NODElayer(nn.Module):
+    def __init__(self, df, evaluation_times=(0.0, 1.0)):
+        super(NODElayer, self).__init__()
+        self.df = df
+        self.evaluation_times = torch.as_tensor(evaluation_times)
+
+    def forward(self, x0):
+        out = odeint(self.df, x0, self.evaluation_times, rtol=tol, atol=tol)
+        return out[1]
+
+
 class NODE(nn.Module):
     def __init__(self, df=None, **kwargs):
         super(NODE, self).__init__()
@@ -77,7 +90,7 @@ class SONODE(NODE):
 class HeavyBallODE(NODE):
     def __init__(self, df, gamma):
         super().__init__(df)
-        self.gamma = gamma
+        self.gamma = torch.as_tensor(gamma)
 
     def forward(self, t, x):
         """

@@ -59,13 +59,15 @@ if __name__ == '__main__':
     device = torch.device('cuda:' + str(args.gpu) if torch.cuda.is_available() else 'cpu')
 
     # make data
+    n = 5
     z0 = torch.tensor([1.0, -1.0]).reshape(-1, 1, 1).float().to(device)
     zN = torch.tensor([-1.0, 1.0]).reshape(-1, 1, 1).float().to(device)
+    z = torch.tensor([1.0, -1.0] * n).reshape(2, -1, 1, 1).transpose(0, 1).float().to(device)
     # model
     t0, tN = 0.0, 1.0
-    tarr = torch.tensor([t0, tN])
+    tarr = torch.arange(0, 1, 1 / n)
     dim = 1
-    nhid = 10
+    nhid = 50
     model = NODEintegrate(HeavyBallODE(DF(dim, nhid), nn.Parameter(torch.tensor([0.0]))), initial_velocity(dim, nhid))
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     loss_func = nn.MSELoss()
@@ -87,7 +89,7 @@ if __name__ == '__main__':
         pred_z = model(None, tarr, z0)
 
         # compute loss
-        loss = loss_func(pred_z[1, :, :1, :], zN)
+        loss = loss_func(pred_z[:, :, :1, :], z)
         loss.backward()
         optimizer.step()
         iter_end_time = time.time()
@@ -103,7 +105,7 @@ if __name__ == '__main__':
     print('\n')
     print('Training complete after {} iters.'.format(itr))
     print('Time = ' + str(end_time - start_time))
-    loss = loss_func(pred_z[1, :, :1, :], zN).detach().numpy()
+    loss = loss_func(pred_z[:, :, :1, :], z).detach().numpy()
     print('Train MSE = ' + str(loss))
     print('NFE = ' + str(model.nfe))
     print('Parameters = ' + str(count_parameters(model)))
@@ -113,9 +115,11 @@ if __name__ == '__main__':
         ts = torch.tensor(np.linspace(t0, tN, ntimestamps)).float()
         pred_z = model(None, ts, z0[:, :, :1])
         pred_z = pred_z.detach().numpy()
+        z = z.detach().numpy()
         print(pred_z.shape)
         ts = ts.detach().numpy()
         plt.figure()
         for i in range(2):
             plt.plot(ts, pred_z[:, i, 0, 0])
+            plt.plot(tarr.numpy(), z[:, i, 0, 0])
         plt.show()
