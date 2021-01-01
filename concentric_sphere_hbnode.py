@@ -12,12 +12,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--tol', type=float, default=1e-3)
 parser.add_argument('--adjoint', type=eval, default=False)
 parser.add_argument('--visualize', type=eval, default=True)
-parser.add_argument('--niters', type=int, default=200)
+parser.add_argument('--niters', type=int, default=100)
 parser.add_argument('--lr', type=float, default=0.01)
 parser.add_argument('--gpu', type=int, default=0)
 args = parser.parse_args()
 
-dim = 1
+dim = 30
 aug = 0
 dataset = ConcentricSphere(dim, (0, 0.5), (1, 1.5), 500, 1500)
 x = torch.stack(dataset.data).reshape(-1, 1, dim)

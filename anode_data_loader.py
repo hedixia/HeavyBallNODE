@@ -202,7 +202,7 @@ def dataset_to_numpy(dataset):
     return X.astype('float32'), y.astype('float32')
 
 
-def mnist(batch_size=64, size=28, path_to_data='../../mnist_data'):
+def mnist(batch_size=64, size=28, path_to_data='../mnist_data'):
     """MNIST dataloader with (28, 28) images.
     Parameters
     ----------
