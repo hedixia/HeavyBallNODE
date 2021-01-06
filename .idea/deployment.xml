@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="bertozzilab2@128.97.19.152:22 (7)">
+  <component name="PublishConfigData" autoUpload="Always" serverName="hedixia@128.97.19.149:22">
     <serverData>
       <paths name="bertozzilab2@128.97.19.152:22 (7)">
         <serverdata>
@@ -12,7 +12,7 @@
       <paths name="hedixia@128.97.19.149:22">
         <serverdata>
           <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/Documents/HBNODE" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
