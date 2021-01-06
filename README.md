@@ -9,9 +9,13 @@ First create a NODE type module by
 
 node = NODE(...)
 
-And turn it into a model by 
+And turn it into a time series model by 
 
 model = NODEintegrate(node, initial_condition)
+
+Comparably there is a residual network type model by
+
+model = NODElayer(node)
 
 Initial condition input are
 

@@ -7,17 +7,17 @@ from anode_data_loader import mnist
 from base import *
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--tol', type=float, default=1e-3)
+parser.add_argument('--tol', type=float, default=1e-2)
 parser.add_argument('--adjoint', type=eval, default=False)
 parser.add_argument('--visualize', type=eval, default=True)
-parser.add_argument('--niters', type=int, default=50)
-parser.add_argument('--lr', type=float, default=0.01)
+parser.add_argument('--niters', type=int, default=20)
+parser.add_argument('--lr', type=float, default=0.001)
 parser.add_argument('--gpu', type=int, default=0)
 args = parser.parse_args()
 
 # shape: [time, batch, derivatives, channel, x, y]
 dim = 1
-hidden = 80
+hidden = 30
 trdat, tsdat = mnist(batch_size=256)
 
 
@@ -26,7 +26,7 @@ class initial_velocity(nn.Module):
     def __init__(self, in_channels, out_channels, nhidden):
         super(initial_velocity, self).__init__()
         assert (out_channels >= in_channels)
-        self.tanh = nn.Hardtanh(min_val=-5, max_val=5, inplace=False)
+        self.actv = nn.LeakyReLU(0.3)
         self.fc1 = nn.Conv2d(in_channels, nhidden, kernel_size=1, padding=0)
         self.fc2 = nn.Conv2d(nhidden, nhidden, kernel_size=3, padding=1)
         self.fc3 = nn.Conv2d(nhidden, 3 * out_channels - in_channels, kernel_size=1, padding=0)
@@ -34,9 +34,9 @@ class initial_velocity(nn.Module):
     def forward(self, x0):
         x0 = x0.float()
         out = self.fc1(x0)
-        out = self.tanh(out)
+        out = self.actv(out)
         out = self.fc2(out)
-        out = self.tanh(out)
+        out = self.actv(out)
         out = self.fc3(out)
         out = torch.cat([x0, out], dim=1)
         out = rearrange(out, 'b (d c) x y -> b d c x y', d=3)
@@ -47,14 +47,14 @@ class DF(nn.Module):
 
     def __init__(self, in_channels, nhidden):
         super(DF, self).__init__()
-        self.activation = nn.ReLU()
+        self.activation = nn.LeakyReLU(0.3)
         self.fc1 = nn.Conv2d(in_channels + 1, nhidden, kernel_size=1, padding=0)
         self.fc2 = nn.Conv2d(nhidden + 1, nhidden, kernel_size=3, padding=1)
         self.fc3 = nn.Conv2d(nhidden + 1, in_channels, kernel_size=1, padding=0)
 
     def forward(self, t, x0):
         out = rearrange(x0, 'b 1 c x y -> b c x y')
-        t_img = torch.ones_like(x[:, :1, :, :]).to(args.gpu) * t
+        t_img = torch.ones_like(x[:, :1, :, :]) * t
         out = torch.cat([out, t_img], dim=1)
         out = self.fc1(out)
         out = self.activation(out)
@@ -80,7 +80,7 @@ class predictionlayer(nn.Module):
 
 gamma = 0.0  # nn.Parameter(torch.tensor([0.0]))
 hblayer = NODElayer(HeavyBallODE(DF(dim, dim), gamma))
-model = nn.Sequential(initial_velocity(dim, dim, hidden), hblayer, predictionlayer(dim), nn.Softmax(dim=1)).to(device=args.gpu)
+model = nn.Sequential(initial_velocity(dim, dim, hidden), hblayer, predictionlayer(dim))#.to(device=args.gpu)
 
 optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.00)
 loss_func = nn.CrossEntropyLoss()
@@ -115,14 +115,15 @@ while epoch < args.niters:
         itr_arr[epoch - 1] = epoch
         loss_arr[epoch - 1] += loss
         nfe_arr[epoch - 1] += model[1].df.nfe
-        if itrcnt % 300 == 0:
+        if itrcnt % 100 == 0:
             print(itrcnt, (time.time() - start_time) / 60, loss, model[1].df.nfe)
     iter_end_time = time.time()
     time_arr[epoch - 1] = iter_end_time - iter_start_time
     loss_arr[epoch - 1] /= (itrcnt // epoch)
     nfe_arr[epoch - 1] /= (itrcnt // epoch)
-    print('Iter: {}, running MSE: {:.4f}, nfe: {}'.format(epoch, loss_arr[epoch - 1], nfe_arr[epoch - 1]))
-    if epoch % 10 == 9:
+    print('Iter: {}, running loss: {:.4f}, nfe: {}'.format(epoch, loss_arr[epoch - 1], nfe_arr[epoch - 1]))
+    if epoch % 5 == 0:
+        model[1].df.nfe = 0
         end_time = time.time()
         print('\n')
         print('Training complete after {} iters.'.format(epoch))
@@ -143,7 +144,7 @@ while epoch < args.niters:
 
         loss /= dsize
         acc /= dsize
-        print('Test MSE = ' + str(loss))
+        print('Test loss = ' + str(loss))
         print('Test acc = ' + str(acc))
         print('NFE = ' + str(model[1].df.nfe / bcnt))
         print('Parameters = ' + str(count_parameters(model)))
