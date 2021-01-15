@@ -87,10 +87,14 @@ class SONODE(NODE):
         return torch.cat((v, out), dim=1)
 
 
+
 class HeavyBallODE(NODE):
-    def __init__(self, df, gamma):
+    def __init__(self, df, gamma=None):
         super().__init__(df)
-        self.gamma = torch.as_tensor(gamma)
+        if gamma is None:
+            self.gamma = nn.Parameter(torch.Tensor([0.0]))
+        else:
+            self.gamma = gamma
 
     def forward(self, t, x):
         """
@@ -108,6 +112,6 @@ class HeavyBallODE(NODE):
         self.nfe += 1
         theta, m, c = torch.split(x, 1, dim=1)
         dtheta = - m * c
-        dm = self.df(t, theta) - torch.sigmoid(self.gamma) * m
+        dm = self.df(t, theta) - torch.sigmoid(self.gamma / 1.0) * m
         dc = 0 * c
         return torch.cat((dtheta, dm, dc), dim=1)
