@@ -16,6 +16,8 @@ from torchvision import datasets, transforms
 
 # Format [time, batch, diff, vector]
 
+tol = 1e-3
+
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
