@@ -61,6 +61,10 @@ class NODElayer(nn.Module):
         out = odeint(self.df, x0, self.evaluation_times, rtol=tol, atol=tol)
         return out[1]
 
+    def to(self, device, *args, **kwargs):
+        super().to(device, *args, **kwargs)
+        self.evaluation_times.to(device)
+
 
 class NODE(nn.Module):
     def __init__(self, df=None, **kwargs):
@@ -70,6 +74,7 @@ class NODE(nn.Module):
         self.nfe = 0
 
     def forward(self, t, x):
+        self.nfe += 1
         return self.df(t, x)
 
 
@@ -88,9 +93,12 @@ class SONODE(NODE):
 
 
 class HeavyBallODE(NODE):
-    def __init__(self, df, gamma):
+    def __init__(self, df, gamma=None):
         super().__init__(df)
-        self.gamma = torch.as_tensor(gamma)
+        if gamma is None:
+            self.gamma = nn.Parameter(torch.Tensor([-3.0]))
+        else:
+            self.gamma = gamma
 
     def forward(self, t, x):
         """
@@ -106,8 +114,7 @@ class HeavyBallODE(NODE):
         :return: [theta' m' v'], shape [batch, 3, dim]
         """
         self.nfe += 1
-        theta, m, c = torch.split(x, 1, dim=1)
-        dtheta = - m * c
+        theta, m = torch.split(x, 1, dim=1)
+        dtheta = - m
         dm = self.df(t, theta) - torch.sigmoid(self.gamma) * m
-        dc = 0 * c
-        return torch.cat((dtheta, dm, dc), dim=1)
+        return torch.cat((dtheta, dm), dim=1)
