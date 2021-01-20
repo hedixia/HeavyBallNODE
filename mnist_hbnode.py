@@ -85,75 +85,7 @@ class predictionlayer(nn.Module):
         return x
 
 
-def train(model, optimizer, trdat, tsdat):
-    epoch = 0
-    itrcnt = 0
-    loss_func = nn.CrossEntropyLoss()
-    itr_arr = np.zeros(args.niters)
-    loss_arr = np.zeros(args.niters)
-    nfe_arr = np.zeros(args.niters)
-    time_arr = np.zeros(args.niters)
-
-    # training
-    start_time = time.time()
-    while epoch < args.niters:
-        epoch += 1
-        iter_start_time = time.time()
-        for x, y in trdat:
-            itrcnt += 1
-            model[1].df.nfe = 0
-            optimizer.zero_grad()
-            # forward in time and solve ode
-            pred_y = model(x.to(device=args.gpu))
-            # compute loss
-            loss = loss_func(pred_y, y.to(device=args.gpu))
-            loss.backward()
-            nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            optimizer.step()
-            # make arrays
-            itr_arr[epoch - 1] = epoch
-            loss_arr[epoch - 1] += loss
-            nfe_arr[epoch - 1] += model[1].df.nfe
-        iter_end_time = time.time()
-        time_arr[epoch - 1] = iter_end_time - iter_start_time
-        loss_arr[epoch - 1] *= 1.0 * epoch / itrcnt
-        nfe_arr[epoch - 1] *= 1.0 * epoch / itrcnt
-        printouts = [epoch, loss_arr[epoch - 1], nfe_arr[epoch - 1], time_arr[epoch - 1],
-                     (time.time() - start_time) / 60]
-        print(str_rec(rec_names, printouts, rec_unit, presets="Train|| {}"))
-        try:
-            print(torch.sigmoid(model[1].df.gamma))
-        except Exception:
-            pass
-        if epoch % 2 == 0:
-            model[1].df.nfe = 0
-            end_time = time.time()
-            loss = 0
-            acc = 0
-            dsize = 0
-            bcnt = 0
-            for x, y in tsdat:
-                # forward in time and solve ode
-                dsize += y.shape[0]
-                y = y.to(device=args.gpu)
-                pred_y = model(x.to(device=args.gpu))
-                pred_l = torch.argmax(pred_y, dim=1)
-                acc += torch.sum((pred_l == y).float())
-                bcnt += 1
-                # compute loss
-                loss += loss_func(pred_y, y) * y.shape[0]
-
-            loss /= dsize
-            acc /= dsize
-            printouts = [epoch, loss.detach().cpu(), acc.detach().cpu(), str(model[1].df.nfe / bcnt),
-                         str(count_parameters(model))]
-            names = ["iter", "loss", "acc", "nfe", "param cnt"]
-            print(str_rec(names, printouts, presets="Test|| {}"))
-
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-print("==> Use accelerator: ", device)
 hblayer = NODElayer(HeavyBallODE(DF(dim, hidden), None))
 model = nn.Sequential(initial_velocity(1, dim, hidden), hblayer, predictionlayer(dim)).to(device=args.gpu)
 optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.000)
-print(count_parameters(model))
-train(model, optimizer, trdat, tsdat)
+train(model, optimizer, trdat, tsdat, args, 2, gamma=model[1].df.gamma)
