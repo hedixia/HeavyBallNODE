@@ -12,6 +12,7 @@ from random import random
 from torch.utils.data import Dataset, DataLoader
 from torch.distributions import Normal
 from torchvision import datasets, transforms
+import sys
 
 
 # Format [time, batch, diff, vector]
@@ -46,7 +47,9 @@ rec_names = ["iter", "loss", "nfe", "time/iter", "time"]
 rec_unit = ["", "", "", "s", "min"]
 
 
-def train(model, optimizer, trdat, tsdat, args, evalfreq=2, **extraprint):
+def train(model, optimizer, trdat, tsdat, args, evalfreq=2, stdout=sys.stdout, **extraprint):
+    defaultout = sys.stdout
+    sys.stdout = stdout
     print("==> Train model {}, params {}".format(type(model), count_parameters(model)))
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print("==> Use accelerator: ", device)
@@ -114,4 +117,5 @@ def train(model, optimizer, trdat, tsdat, args, evalfreq=2, **extraprint):
                          str(count_parameters(model))]
             names = ["iter", "loss", "acc", "nfe", "param cnt"]
             print(str_rec(names, printouts, presets="Test|| {}"))
+    sys.stdout = defaultout
     return itr_arr, loss_arr, nfe_arr, time_arr
