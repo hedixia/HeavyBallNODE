@@ -76,7 +76,7 @@ class predictionlayer(nn.Module):
         return x
 
 gamma = nn.Parameter(torch.tensor([0.0]))
-hblayer = NODElayer(HeavyBallODE(DF(dim+aug, 32), gamma))
+hblayer = NODElayer(HeavyBallNODE(DF(dim + aug, 32), gamma))
 model = nn.Sequential(initial_velocity(dim, 32, aug), hblayer, predictionlayer(), nn.Tanh())
 print(model(x).shape)
 

@@ -60,6 +60,7 @@ def train(model, optimizer, trdat, tsdat, args, evalfreq=2, stdout=sys.stdout, *
     loss_arr = np.zeros(args.niters)
     nfe_arr = np.zeros(args.niters)
     time_arr = np.zeros(args.niters)
+    acc_arr = np.zeros(args.niters)
 
     # training
     start_time = time.time()
@@ -117,5 +118,6 @@ def train(model, optimizer, trdat, tsdat, args, evalfreq=2, stdout=sys.stdout, *
                          str(count_parameters(model))]
             names = ["iter", "loss", "acc", "nfe", "param cnt"]
             print(str_rec(names, printouts, presets="Test|| {}"))
+            acc_arr[epoch-1] = acc.detach().cpu().numpy()
     sys.stdout = defaultout
-    return itr_arr, loss_arr, nfe_arr, time_arr
+    return itr_arr, loss_arr, nfe_arr, time_arr, acc_arr

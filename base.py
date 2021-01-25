@@ -92,7 +92,7 @@ class SONODE(NODE):
         return torch.cat((v, out), dim=1)
 
 
-class HeavyBallODE(NODE):
+class HeavyBallNODE(NODE):
     def __init__(self, df, gamma=None):
         super().__init__(df)
         if gamma is None:

@@ -71,7 +71,7 @@ class DF(nn.Module):
 
 
 
-hbnode = NODEintegrate(HeavyBallODE(DF(aug, hidden), None), initial_velocity(dim, aug)).to(0)
+hbnode = NODEintegrate(HeavyBallNODE(DF(aug, hidden), None), initial_velocity(dim, aug)).to(0)
 optimizer = optim.Adam(hbnode.parameters(), lr=args.lr, weight_decay=0.00)
 hbtr = train(hbnode, optimizer, trdat, tsdat, trange)
 

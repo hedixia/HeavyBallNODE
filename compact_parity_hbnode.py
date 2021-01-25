@@ -68,7 +68,7 @@ if __name__ == '__main__':
     tarr = torch.arange(0, 1, 1 / n)
     dim = 1
     nhid = 50
-    model = NODEintegrate(HeavyBallODE(DF(dim, nhid), nn.Parameter(torch.tensor([0.0]))), initial_velocity(dim, nhid))
+    model = NODEintegrate(HeavyBallNODE(DF(dim, nhid), nn.Parameter(torch.tensor([0.0]))), initial_velocity(dim, nhid))
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     loss_func = nn.MSELoss()
 

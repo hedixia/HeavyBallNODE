@@ -87,7 +87,7 @@ class predictionlayer(nn.Module):
 file = open('./data/0.txt', 'a')
 
 for tries in range(5):
-    hblayer = NODElayer(HeavyBallODE(DF(dim, hidden), None))
+    hblayer = NODElayer(HeavyBallNODE(DF(dim, hidden), None))
     model = nn.Sequential(initial_velocity(1, dim, hidden), hblayer, predictionlayer(dim)).to(device=args.gpu)
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.000)
-    train(model, optimizer, trdat, tsdat, args, 1, file, gamma=model[1].df.gamma)
+    train(model, optimizer, trdat, tsdat, args, 1, gamma=model[1].df.gamma)

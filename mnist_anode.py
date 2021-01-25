@@ -18,7 +18,7 @@ args = parser.parse_args()
 # shape: [time, batch, derivatives, channel, x, y]
 dim = 1
 hidden = 60
-aug=5
+aug = 5
 trdat, tsdat = mnist()
 
 
@@ -33,7 +33,7 @@ class initial_velocity(nn.Module):
         outshape = list(x0.shape)
         outshape[1] = self.aug
         out = torch.zeros(outshape)
-        out[:,1] += x0
+        out[:, 1] += x0
         return out
 
 

@@ -82,7 +82,7 @@ class predictionlayer(nn.Module):
         return x
 
 #file = open('./data/cifar0.txt', 'a')
-hblayer = NODElayer(HeavyBallODE(DF(dim, hidden), None))
+hblayer = NODElayer(HeavyBallNODE(DF(dim, hidden), None))
 model = nn.Sequential(initial_velocity(3, dim, hidden), hblayer, predictionlayer(dim)).to(device=args.gpu)
 optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.00)
 print(count_parameters(model))
