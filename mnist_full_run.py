@@ -29,9 +29,9 @@ class anode_initial_velocity(nn.Module):
     def forward(self, x0):
         x0 = rearrange(x0.float(), 'b c x y -> b 1 c x y')
         outshape = list(x0.shape)
-        outshape[1] = self.aug
+        outshape[2] = self.aug
         out = torch.zeros(outshape).to(args.gpu)
-        out[:, :1] += x0
+        out[:, :, :1] += x0
         return out
 
 
@@ -93,7 +93,7 @@ class predictionlayer(nn.Module):
 
     def forward(self, x):
         if self.truncate:
-            x = rearrange(x[:,0], 'b ... -> b (...)')
+            x = rearrange(x[:, 0], 'b ... -> b (...)')
         else:
             x = rearrange(x, 'b ... -> b (...)')
         x = self.dense(x)
@@ -108,46 +108,46 @@ def model_gen(name):
         dim = 1
         nhid = 92
         layer = NODElayer(NODE(DF(dim, nhid)))
-        model = nn.Sequential(anode_initial_velocity(1, dim), layer, predictionlayer(dim))
+        model = nn.Sequential(anode_initial_velocity(1, dim),
+                              layer, predictionlayer(dim))
     elif name == 'anode':
         dim = 6
         nhid = 64
         layer = NODElayer(NODE(DF(dim, nhid)))
-        model = nn.Sequential(anode_initial_velocity(1, dim), layer, predictionlayer(dim))
+        model = nn.Sequential(anode_initial_velocity(1, dim),
+                              layer, predictionlayer(dim))
     elif name == 'sonode':
         dim = 1
         nhid = 65
-        hblayer = NODElayer(SONODE(DF(2*dim, nhid, dim)))
-        model = nn.Sequential(hbnode_initial_velocity(1, dim, nhid), hblayer,
-                              predictionlayer(dim, truncate=True)).to(
-            device=args.gpu)
+        hblayer = NODElayer(SONODE(DF(2 * dim, nhid, dim)))
+        model = nn.Sequential(hbnode_initial_velocity(1, dim, nhid),
+                              hblayer, predictionlayer(dim, truncate=True)).to(device=args.gpu)
     elif name == 'sonode2':
         dim = 5
         nhid = 50
-        hblayer = NODElayer(SONODE(DF(2*dim, nhid, dim)))
-        model = nn.Sequential(hbnode_initial_velocity(1, dim, nhid), hblayer,
-                              predictionlayer(dim, truncate=True)).to(
-            device=args.gpu)
+        hblayer = NODElayer(SONODE(DF(2 * dim, nhid, dim)))
+        model = nn.Sequential(hbnode_initial_velocity(1, dim, nhid),
+                              hblayer, predictionlayer(dim, truncate=True)).to(device=args.gpu)
     elif name == 'hbnode':
         dim = 5
         nhid = 50
         layer = NODElayer(HeavyBallNODE(DF(dim, nhid), None))
         model = nn.Sequential(hbnode_initial_velocity(1, dim, nhid),
-                              layer, predictionlayer(dim, truncate=True)).to(
-            device=args.gpu)
+                              layer, predictionlayer(dim, truncate=True)).to(device=args.gpu)
     else:
         print('model {} not supported.'.format(name))
         model = None
     return model.to(args.gpu)
 
-names =['node', 'anode', 'sonode', 'sonode2','hbnode']
 
-runnum = 1
+names = ['node', 'anode', 'sonode', 'sonode2', 'hbnode']
+
+runnum = 'hb'
 log = open('./data/_{}.txt'.format(runnum), 'a')
 datname = open('./data/mnist_dat_{}.txt'.format(runnum), 'wb')
 dat = []
-for i in range(1):
-    for name in names:
+for i in range(5):
+    for name in ['hbnode']:
         model = model_gen(name)
         print(name, count_parameters(model), *[count_parameters(i) for i in model])
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.000)
@@ -155,4 +155,5 @@ for i in range(1):
         dat.append([name, i, train_out])
 
 import pickle
+
 pickle.dump(dat, datname)
