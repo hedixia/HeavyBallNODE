@@ -10,7 +10,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--tol', type=float, default=1e-3)
 parser.add_argument('--adjoint', type=eval, default=False)
 parser.add_argument('--visualize', type=eval, default=True)
-parser.add_argument('--niters', type=int, default=40)
+parser.add_argument('--niters', type=int, default=20)
 parser.add_argument('--lr', type=float, default=0.001)
 parser.add_argument('--gpu', type=int, default=0)
 args = parser.parse_args()
@@ -21,17 +21,18 @@ args = parser.parse_args()
 
 class anode_initial_velocity(nn.Module):
 
-    def __init__(self, in_channels, aug):
+    def __init__(self, in_channels, aug, dch=1):
         super(anode_initial_velocity, self).__init__()
         self.aug = aug
         self.in_channels = in_channels
+        self.dch = dch
 
     def forward(self, x0):
-        x0 = rearrange(x0.float(), 'b c x y -> b 1 c x y')
         outshape = list(x0.shape)
-        outshape[2] = self.aug
+        outshape[1] = self.aug * self.dch
         out = torch.zeros(outshape).to(args.gpu)
-        out[:, :, :1] += x0
+        out[:, :1] += x0
+        out = rearrange(out, 'b (d c) ... -> b d c ...', d=self.dch)
         return out
 
 
@@ -86,16 +87,18 @@ class DF(nn.Module):
 
 
 class predictionlayer(nn.Module):
-    def __init__(self, in_channels, truncate=False):
+    def __init__(self, in_channels, truncate=False, dropout=0.0):
         super(predictionlayer, self).__init__()
         self.dense = nn.Linear(in_channels * 28 * 28, 10)
         self.truncate = truncate
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
         if self.truncate:
             x = rearrange(x[:, 0], 'b ... -> b (...)')
         else:
             x = rearrange(x, 'b ... -> b (...)')
+        x = self.dropout(x)
         x = self.dense(x)
         return x
 
@@ -134,6 +137,18 @@ def model_gen(name):
         layer = NODElayer(HeavyBallNODE(DF(dim, nhid), None))
         model = nn.Sequential(hbnode_initial_velocity(1, dim, nhid),
                               layer, predictionlayer(dim, truncate=True)).to(device=args.gpu)
+    elif name == 'hbnode0':
+        dim = 5
+        nhid = 70
+        layer = NODElayer(HeavyBallNODE(DF(dim, nhid), None))
+        model = nn.Sequential(anode_initial_velocity(1, dim, 2),
+                              layer, predictionlayer(dim, truncate=True, dropout=0.7)).to(device=args.gpu)
+    elif name == 'hbnode06':
+        dim = 6
+        nhid = 64
+        layer = NODElayer(HeavyBallNODE(DF(dim, nhid), None))
+        model = nn.Sequential(anode_initial_velocity(1, dim, 2),
+                              layer, predictionlayer(dim, truncate=True)).to(device=args.gpu)
     else:
         print('model {} not supported.'.format(name))
         model = None
@@ -142,15 +157,17 @@ def model_gen(name):
 
 names = ['node', 'anode', 'sonode', 'sonode2', 'hbnode']
 
-runnum = 'hb'
-log = open('./data/_{}.txt'.format(runnum), 'a')
-datname = open('./data/mnist_dat_{}.txt'.format(runnum), 'wb')
+runnum = 'hb0'
+log = open('./output/log_{}.txt'.format(runnum), 'a')
+datname = open('./output/mnist_dat_{}.txt'.format(runnum), 'wb')
 dat = []
 for i in range(5):
-    for name in ['hbnode']:
+    for name in ['hbnode0']:
         model = model_gen(name)
         print(name, count_parameters(model), *[count_parameters(i) for i in model])
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.000)
+        lrscheduler = torch.optim.lr_scheduler.StepLR(optimizer, 50, 0.9)
+        #train_out = train(model, optimizer, trdat, tsdat, args, evalfreq=1)
         train_out = train(model, optimizer, trdat, tsdat, args, evalfreq=1, stdout=log)
         dat.append([name, i, train_out])
 

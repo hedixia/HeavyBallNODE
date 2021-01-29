@@ -47,7 +47,7 @@ rec_names = ["iter", "loss", "nfe", "time/iter", "time"]
 rec_unit = ["", "", "", "s", "min"]
 
 
-def train(model, optimizer, trdat, tsdat, args, evalfreq=2, stdout=sys.stdout, **extraprint):
+def train(model, optimizer, trdat, tsdat, args, evalfreq=2, lrscheduler=False, stdout=sys.stdout, **extraprint):
     defaultout = sys.stdout
     sys.stdout = stdout
     print("==> Train model {}, params {}".format(type(model), count_parameters(model)))
@@ -78,6 +78,8 @@ def train(model, optimizer, trdat, tsdat, args, evalfreq=2, stdout=sys.stdout, *
             loss.backward()
             nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
+            if lrscheduler:
+                lrscheduler.step()
             # make arrays
             itr_arr[epoch - 1] = epoch
             loss_arr[epoch - 1] += loss
