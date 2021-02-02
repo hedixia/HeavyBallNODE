@@ -13,7 +13,7 @@ from torch.utils.data import Dataset, DataLoader
 from torch.distributions import Normal
 from torchvision import datasets, transforms
 import sys
-
+from matplotlib import pyplot as plt
 
 # Format [time, batch, diff, vector]
 
@@ -43,10 +43,10 @@ def str_rec(names, data, unit=None, sep=', ', presets='{}'):
     return out_str
 
 
-rec_names = ["iter", "loss", "nfe", "time/iter", "time"]
-rec_unit = ["", "", "", "s", "min"]
+rec_names = ["iter", "loss", "acc", "nfe", "time/iter", "time"]
+rec_unit = ["", "", "", "", "s", "min"]
 
-
+# only for training mnist dataset
 def train(model, optimizer, trdat, tsdat, args, evalfreq=2, lrscheduler=False, stdout=sys.stdout, **extraprint):
     defaultout = sys.stdout
     sys.stdout = stdout
@@ -67,6 +67,7 @@ def train(model, optimizer, trdat, tsdat, args, evalfreq=2, lrscheduler=False, s
     while epoch < args.niters:
         epoch += 1
         iter_start_time = time.time()
+        acc = 0
         for x, y in trdat:
             itrcnt += 1
             model[1].df.nfe = 0
@@ -76,19 +77,21 @@ def train(model, optimizer, trdat, tsdat, args, evalfreq=2, lrscheduler=False, s
             # compute loss
             loss = loss_func(pred_y, y.to(device=args.gpu))
             loss.backward()
-            nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            nn.utils.clip_grad_norm_(model.parameters(), 10.0)
             optimizer.step()
-            if lrscheduler:
-                lrscheduler.step()
             # make arrays
             itr_arr[epoch - 1] = epoch
             loss_arr[epoch - 1] += loss
             nfe_arr[epoch - 1] += model[1].df.nfe
+            acc += torch.sum((torch.argmax(pred_y, dim=1) == y.to(device=args.gpu)).float())
+        if lrscheduler:
+            lrscheduler.step()
         iter_end_time = time.time()
         time_arr[epoch - 1] = iter_end_time - iter_start_time
         loss_arr[epoch - 1] *= 1.0 * epoch / itrcnt
         nfe_arr[epoch - 1] *= 1.0 * epoch / itrcnt
-        printouts = [epoch, loss_arr[epoch - 1], nfe_arr[epoch - 1], time_arr[epoch - 1],
+        acc /= 60000
+        printouts = [epoch, loss_arr[epoch - 1], acc, nfe_arr[epoch - 1], time_arr[epoch - 1],
                      (time.time() - start_time) / 60]
         print(str_rec(rec_names, printouts, rec_unit, presets="Train|| {}"))
         print('Extra: ', extraprint)
@@ -101,11 +104,9 @@ def train(model, optimizer, trdat, tsdat, args, evalfreq=2, lrscheduler=False, s
             end_time = time.time()
             loss = 0
             acc = 0
-            dsize = 0
             bcnt = 0
             for x, y in tsdat:
                 # forward in time and solve ode
-                dsize += y.shape[0]
                 y = y.to(device=args.gpu)
                 pred_y = model(x.to(device=args.gpu))
                 pred_l = torch.argmax(pred_y, dim=1)
@@ -114,8 +115,8 @@ def train(model, optimizer, trdat, tsdat, args, evalfreq=2, lrscheduler=False, s
                 # compute loss
                 loss += loss_func(pred_y, y) * y.shape[0]
 
-            loss /= dsize
-            acc /= dsize
+            loss /= 10000
+            acc /= 10000
             printouts = [epoch, loss.detach().cpu(), acc.detach().cpu(), str(model[1].df.nfe / bcnt),
                          str(count_parameters(model))]
             names = ["iter", "loss", "acc", "nfe", "param cnt"]

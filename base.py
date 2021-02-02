@@ -14,6 +14,9 @@ class Example_df(nn.Module):
         x = self.dense2(x)
         return x
 
+class Zeronet(nn.Module):
+    def forward(self, x):
+        return torch.zeros_like(x)
 
 class NODEintegrate(nn.Module):
 
@@ -93,12 +96,13 @@ class SONODE(NODE):
 
 
 class HeavyBallNODE(NODE):
-    def __init__(self, df, gamma=None):
+    def __init__(self, df, gamma=None, thetaact=None, gammaact='sigmoid', timescale=1, thetalin=None):
         super().__init__(df)
-        if gamma is None:
-            self.gamma = nn.Parameter(torch.Tensor([-3.0]))
-        else:
-            self.gamma = gamma
+        self.gamma = nn.Parameter(torch.Tensor([-3.0])) if gamma is None else nn.Parameter(torch.Tensor([gamma]))
+        self.gammaact = nn.Sigmoid() if gammaact == 'sigmoid' else gammaact
+        self.timescale = timescale
+        self.thetaact = nn.Identity() if thetaact is None else thetaact
+        self.thetalin = Zeronet() if thetalin is None else thetalin
 
     def forward(self, t, x):
         """
@@ -115,6 +119,6 @@ class HeavyBallNODE(NODE):
         """
         self.nfe += 1
         theta, m = torch.split(x, 1, dim=1)
-        dtheta = - m
-        dm = self.df(t, theta) - torch.sigmoid(self.gamma) * m
+        dtheta = self.thetaact(self.thetalin(theta) - m)
+        dm = self.df(t, theta) + self.gamma * self.gamma * theta / 4 - self.timescale * torch.sigmoid(self.gamma) * m
         return torch.cat((dtheta, dm), dim=1)

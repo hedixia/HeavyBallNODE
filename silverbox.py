@@ -65,32 +65,43 @@ class DF(nn.Module):
 
 
 # from torchdiffeq import odeint
-trsz = 1000
-tssz = 3000
+
 model = NODEintegrate(HeavyBallNODE(DF(1), None), initial_velocity(1, 1, 2)).to(0)
 model_dict = model.state_dict()
-for i in model_dict:
-    model_dict[i] *= 0.01
+#for i in model_dict:
+    #model_dict[i] *= 0.01
+    #model_dict[i] -= 0.2
 model.load_state_dict(model_dict)
 optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.00)
 criteria = nn.MSELoss()
 timelist = [time.time()]
-for epoch in range(5):
+for epoch in range(300):
     model.df.nfe = 0
+    if epoch < 30:
+        trsz = 10
+    elif epoch < 60:
+        trsz = 100
+    else:
+        trsz = 1000
     predict = model(None, torch.arange(trsz * 1.0), v2_data[:1].view(1, 1)).view(trsz, -1)[:, 0]
     loss = criteria(predict, v2_data[:trsz])
     loss.backward()
     loss = loss.detach().cpu().numpy()
     nn.utils.clip_grad_norm_(model.parameters(), 10.0)
     optimizer.step()
-    forecast = model(None, trsz + torch.arange(tssz * 1.0), v2_data[:1].view(1, 1)).view(tssz, -1)[:, 0]
-    floss = criteria(forecast, v2_data[trsz:trsz + tssz])
     timelist.append(time.time())
-    print(str_rec(['epoch', 'loss', 'nfe', 'floss', 'time'], [epoch, loss, model.df.nfe, floss, timelist[-1] - timelist[-2]]))
+    if (epoch + 1) % 10 == 0:
+        tssz = 3000
+        forecast = model(None, trsz + torch.arange(tssz * 1.0), v2_data[:1].view(1, 1)).view(tssz, -1)[:, 0]
+        floss = criteria(forecast, v2_data[trsz:trsz + tssz])
+        print(str_rec(['epoch', 'loss', 'nfe', 'floss', 'time', 'gamma'], [epoch, loss, model.df.nfe, floss, timelist[-1] - timelist[-2], model.df.gamma.detach().cpu().numpy()]))
+        print(model.df.df.fc.weight)
+    else:
+        print(str_rec(['epoch', 'loss', 'nfe', 'time', 'gamma'], [epoch, loss, model.df.nfe, timelist[-1] - timelist[-2], model.df.gamma.detach().cpu().numpy()]))
 
 
 from matplotlib import  pyplot as plt
 trange = torch.arange(tssz + trsz * 1.0)
+plt.plot(trange, v2_data[:len(trange)].cpu())
 plt.plot(trange, model(None, trange, v2_data[:1].view(1, 1)).view(len(trange), -1)[:, 0].detach().cpu())
-plt.plot(trange, v2_data[:len(trange)])
 plt.show()

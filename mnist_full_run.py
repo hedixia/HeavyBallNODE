@@ -166,7 +166,7 @@ for i in range(5):
         model = model_gen(name)
         print(name, count_parameters(model), *[count_parameters(i) for i in model])
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.000)
-        lrscheduler = torch.optim.lr_scheduler.StepLR(optimizer, 50, 0.9)
+        lrscheduler = torch.optim.lr_scheduler.StepLR(optimizer, 200, 0.9)
         #train_out = train(model, optimizer, trdat, tsdat, args, evalfreq=1)
         train_out = train(model, optimizer, trdat, tsdat, args, evalfreq=1, stdout=log)
         dat.append([name, i, train_out])
