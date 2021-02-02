@@ -14,9 +14,11 @@ class Example_df(nn.Module):
         x = self.dense2(x)
         return x
 
+
 class Zeronet(nn.Module):
     def forward(self, x):
         return torch.zeros_like(x)
+
 
 class NODEintegrate(nn.Module):
 
@@ -96,13 +98,13 @@ class SONODE(NODE):
 
 
 class HeavyBallNODE(NODE):
-    def __init__(self, df, gamma=None, thetaact=None, gammaact='sigmoid', timescale=1, thetalin=None):
+    def __init__(self, df, thetaact=None, thetalin=None, gamma_guess=-3.0, gammaact='sigmoid', gamma_correction=False):
         super().__init__(df)
-        self.gamma = nn.Parameter(torch.Tensor([-3.0])) if gamma is None else nn.Parameter(torch.Tensor([gamma]))
+        self.gamma = nn.Parameter(torch.Tensor([gamma_guess]))
         self.gammaact = nn.Sigmoid() if gammaact == 'sigmoid' else gammaact
-        self.timescale = timescale
         self.thetaact = nn.Identity() if thetaact is None else thetaact
         self.thetalin = Zeronet() if thetalin is None else thetalin
+        self.gamma_correction = gamma_correction
 
     def forward(self, t, x):
         """
@@ -120,5 +122,21 @@ class HeavyBallNODE(NODE):
         self.nfe += 1
         theta, m = torch.split(x, 1, dim=1)
         dtheta = self.thetaact(self.thetalin(theta) - m)
-        dm = self.df(t, theta) + self.gamma * self.gamma * theta / 4 - self.timescale * torch.sigmoid(self.gamma) * m
+        dm = self.df(t, theta) - torch.sigmoid(self.gamma) * m
+        dm += self.gamma_correction * self.gamma * self.gamma * theta / 4
         return torch.cat((dtheta, dm), dim=1)
+
+
+class ODERNN(nn.Module):
+    def __init__(self, node, rnn, evaluation_times):
+        super(ODERNN, self).__init__()
+        self.t = evaluation_times
+        self.node = node
+        self.rnn = rnn
+
+    def forward(self, x, rnn_feed):
+        out = torch.zeros([len(self.t), *x.shape]).to(x.device())
+        for i in range(1, len(self.t)):
+            temp = self.node(self.t[i - 1:i + 1], out[i - 1])
+            out[i] = self.rnn(temp, rnn_feed[i])
+        return out
