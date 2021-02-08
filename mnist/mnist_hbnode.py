@@ -1,10 +1,6 @@
-import argparse
-import time
-
-import torch.optim as optim
-
 from anode_data_loader import mnist
 from base import *
+from mnist.mnist_train import train
 
 parser = ArgumentParser()
 parser.add_argument('--tol', type=float, default=1e-3)
@@ -83,6 +79,7 @@ class predictionlayer(nn.Module):
         x = rearrange(x[:, 0], 'b c x y -> b (c x y)')
         x = self.dense(x)
         return x
+
 
 file = open('./data/0.txt', 'a')
 

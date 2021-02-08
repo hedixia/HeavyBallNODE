@@ -1,16 +1,14 @@
 import argparse
-import time
-
-import torch.optim as optim
 
 from anode_data_loader import mnist
 from base import *
+from mnist.mnist_train import train
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--tol', type=float, default=1e-3)
 parser.add_argument('--adjoint', type=eval, default=False)
 parser.add_argument('--visualize', type=eval, default=True)
-parser.add_argument('--niters', type=int, default=20)
+parser.add_argument('--niters', type=int, default=40)
 parser.add_argument('--lr', type=float, default=0.001)
 parser.add_argument('--gpu', type=int, default=0)
 args = parser.parse_args()
@@ -137,17 +135,11 @@ def model_gen(name):
         layer = NODElayer(HeavyBallNODE(DF(dim, nhid), None))
         model = nn.Sequential(hbnode_initial_velocity(1, dim, nhid),
                               layer, predictionlayer(dim, truncate=True)).to(device=args.gpu)
-    elif name == 'hbnode0':
+    elif name == 'ghbnode':
         dim = 5
-        nhid = 70
-        layer = NODElayer(HeavyBallNODE(DF(dim, nhid), None))
-        model = nn.Sequential(anode_initial_velocity(1, dim, 2),
-                              layer, predictionlayer(dim, truncate=True, dropout=0.7)).to(device=args.gpu)
-    elif name == 'hbnode06':
-        dim = 6
-        nhid = 64
-        layer = NODElayer(HeavyBallNODE(DF(dim, nhid), None))
-        model = nn.Sequential(anode_initial_velocity(1, dim, 2),
+        nhid = 50
+        layer = NODElayer(HeavyBallNODE(DF(dim, nhid), thetaact=nn.Hardtanh(-3, 3), gamma_correction=1))
+        model = nn.Sequential(hbnode_initial_velocity(1, dim, nhid),
                               layer, predictionlayer(dim, truncate=True)).to(device=args.gpu)
     else:
         print('model {} not supported.'.format(name))
@@ -155,14 +147,16 @@ def model_gen(name):
     return model.to(args.gpu)
 
 
-names = ['node', 'anode', 'sonode', 'sonode2', 'hbnode']
+names = ['node', 'anode', 'sonode', 'sonode2', 'hbnode', 'ghbnode']
 
-runnum = 'hb0'
-log = open('./output/log_{}.txt'.format(runnum), 'a')
-datname = open('./output/mnist_dat_{}.txt'.format(runnum), 'wb')
+
+
 dat = []
-for i in range(5):
-    for name in ['hbnode0']:
+for name in ['sonode2']:
+    runnum = name[:3]
+    log = open('./output/mnist/log_{}.txt'.format(runnum), 'w')
+    datfile = open('./output/mnist/mnist_dat_{}.txt'.format(runnum), 'wb')
+    for i in range(5):
         model = model_gen(name)
         print(name, count_parameters(model), *[count_parameters(i) for i in model])
         optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.000)
@@ -170,7 +164,7 @@ for i in range(5):
         #train_out = train(model, optimizer, trdat, tsdat, args, evalfreq=1)
         train_out = train(model, optimizer, trdat, tsdat, args, evalfreq=1, stdout=log)
         dat.append([name, i, train_out])
-
-import pickle
-
-pickle.dump(dat, datname)
+        log.writelines(['\n'] * 5)
+    pickle.dump(dat, datfile)
+    log.close()
+    datfile.close()

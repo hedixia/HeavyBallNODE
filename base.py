@@ -1,28 +1,9 @@
-from misc import *
-
-
-class Example_df(nn.Module):
-    def __init__(self, input_dim, output_dim, nhid=20):
-        super(Example_df, self).__init__()
-        self.dense1 = nn.Linear(input_dim, nhid)
-        self.dense2 = nn.Linear(nhid, output_dim)
-        self.lrelu = nn.LeakyReLU(0.2)
-
-    def forward(self, t, x):
-        x = self.dense1(x)
-        x = self.lrelu(x)
-        x = self.dense2(x)
-        return x
-
-
-class Zeronet(nn.Module):
-    def forward(self, x):
-        return torch.zeros_like(x)
+from basehelper import *
 
 
 class NODEintegrate(nn.Module):
 
-    def __init__(self, df=None, x0=None):
+    def __init__(self, df=None, x0=None, tol=tol):
         """
         Create an OdeRnnBase model
             x' = df(x)
@@ -35,6 +16,7 @@ class NODEintegrate(nn.Module):
         super().__init__()
         self.df = df
         self.x0 = x0
+        self.tol = tol
 
     def forward(self, initial_condition, evaluation_times, x0stats=None):
         """
@@ -48,7 +30,7 @@ class NODEintegrate(nn.Module):
             initial_condition = self.x0
         if x0stats is not None:
             initial_condition = self.x0(x0stats)
-        out = odeint(self.df, initial_condition, evaluation_times, rtol=tol, atol=tol)
+        out = odeint(self.df, initial_condition, evaluation_times, rtol=self.tol, atol=self.tol)
         return out
 
     @property
@@ -64,11 +46,30 @@ class NODElayer(nn.Module):
 
     def forward(self, x0):
         out = odeint(self.df, x0, self.evaluation_times, rtol=tol, atol=tol)
-        return out[1]
+        if len(self.evaluation_times) == 2:
+            return out[1]
+        else:
+            return out[1:]
 
     def to(self, device, *args, **kwargs):
         super().to(device, *args, **kwargs)
         self.evaluation_times.to(device)
+
+
+
+class ODERNN(nn.Module):
+    def __init__(self, node, rnn, evaluation_times):
+        super(ODERNN, self).__init__()
+        self.t = evaluation_times
+        self.node = node
+        self.rnn = rnn
+
+    def forward(self, x, rnn_feed):
+        out = torch.zeros([len(self.t), *x.shape]).to(x.device())
+        for i in range(1, len(self.t)):
+            temp = self.node(self.t[i - 1:i + 1], out[i - 1])
+            out[i] = self.rnn(temp, rnn_feed[i])
+        return out
 
 
 class NODE(nn.Module):
@@ -98,7 +99,7 @@ class SONODE(NODE):
 
 
 class HeavyBallNODE(NODE):
-    def __init__(self, df, thetaact=None, thetalin=None, gamma_guess=-3.0, gammaact='sigmoid', gamma_correction=False):
+    def __init__(self, df, thetaact=None, thetalin=None, gamma_guess=-3.0, gammaact='sigmoid', gamma_correction=0):
         super().__init__(df)
         self.gamma = nn.Parameter(torch.Tensor([gamma_guess]))
         self.gammaact = nn.Sigmoid() if gammaact == 'sigmoid' else gammaact
@@ -123,20 +124,24 @@ class HeavyBallNODE(NODE):
         theta, m = torch.split(x, 1, dim=1)
         dtheta = self.thetaact(self.thetalin(theta) - m)
         dm = self.df(t, theta) - torch.sigmoid(self.gamma) * m
-        dm += self.gamma_correction * self.gamma * self.gamma * theta / 4
+        dm += self.gamma_correction * theta
         return torch.cat((dtheta, dm), dim=1)
 
 
-class ODERNN(nn.Module):
-    def __init__(self, node, rnn, evaluation_times):
-        super(ODERNN, self).__init__()
-        self.t = evaluation_times
-        self.node = node
-        self.rnn = rnn
+class HardBoundHeavyBall(HeavyBallNODE):
+    def __init__(self, df, thetaact=None, thetalin=None, gamma_guess=-3.0, gammaact='sigmoid', gamma_correction=0,
+                 normf=0, normbound=100):
+        super().__init__(df, thetaact=thetaact, thetalin=thetalin, gamma_guess=gamma_guess, gammaact=gammaact,
+                         gamma_correction=gamma_correction)
+        assert normbound >= 1
+        self.normf = normf if normf else TVnorm()
+        self.normact = NormAct(normbound)
 
-    def forward(self, x, rnn_feed):
-        out = torch.zeros([len(self.t), *x.shape]).to(x.device())
-        for i in range(1, len(self.t)):
-            temp = self.node(self.t[i - 1:i + 1], out[i - 1])
-            out[i] = self.rnn(temp, rnn_feed[i])
-        return out
+    def forward(self, t, x):
+        self.nfe += 1
+        theta, m, norm = torch.split(x, 1, dim=1)
+        dnorm = self.normf(theta, m)
+        dtheta = self.thetaact(self.thetalin(theta) - m) * self.normact(norm)
+        dm = self.df(t, theta) - torch.sigmoid(self.gamma) * m
+        dm += self.gamma_correction * theta
+        return torch.cat((dtheta, dm, dnorm), dim=1)

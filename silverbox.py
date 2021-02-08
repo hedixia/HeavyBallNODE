@@ -1,4 +1,5 @@
 from base import *
+from sonode_data_loader import load_data
 
 parser = ArgumentParser()
 parser.add_argument('--tol', type=float, default=1e-3)
@@ -11,15 +12,7 @@ parser.add_argument('--npoints', type=int, default=1000)
 parser.add_argument('--experiment_no', type=int, default=1)
 args = parser.parse_args()
 
-sbdat = np.loadtxt('./data/sb.csv', skiprows=1, delimiter=',', usecols=range(2))
-data = np.transpose(sbdat)
-v1_data = data[0]
-v2_data = data[1]
-v1_data = v1_data - np.full_like(v1_data, np.mean(v1_data))
-v2_data = v2_data - np.full_like(v2_data, np.mean(v2_data))
-rescaling = 100
-v1_data = torch.Tensor(rescaling * v1_data).to(0)
-v2_data = torch.Tensor(rescaling * v2_data).to(0)
+v1_data, v2_data = load_data('./data/sb.csv', skiprows=1, usecols=(0, 1), rescaling=100)
 
 
 def v1_func(time):
@@ -68,9 +61,9 @@ class DF(nn.Module):
 
 model = NODEintegrate(HeavyBallNODE(DF(1), None), initial_velocity(1, 1, 2)).to(0)
 model_dict = model.state_dict()
-#for i in model_dict:
-    #model_dict[i] *= 0.01
-    #model_dict[i] -= 0.2
+# for i in model_dict:
+# model_dict[i] *= 0.01
+# model_dict[i] -= 0.2
 model.load_state_dict(model_dict)
 optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.00)
 criteria = nn.MSELoss()
@@ -94,13 +87,16 @@ for epoch in range(300):
         tssz = 3000
         forecast = model(None, trsz + torch.arange(tssz * 1.0), v2_data[:1].view(1, 1)).view(tssz, -1)[:, 0]
         floss = criteria(forecast, v2_data[trsz:trsz + tssz])
-        print(str_rec(['epoch', 'loss', 'nfe', 'floss', 'time', 'gamma'], [epoch, loss, model.df.nfe, floss, timelist[-1] - timelist[-2], model.df.gamma.detach().cpu().numpy()]))
+        print(str_rec(['epoch', 'loss', 'nfe', 'floss', 'time', 'gamma'],
+                      [epoch, loss, model.df.nfe, floss, timelist[-1] - timelist[-2],
+                       model.df.gamma.detach().cpu().numpy()]))
         print(model.df.df.fc.weight)
     else:
-        print(str_rec(['epoch', 'loss', 'nfe', 'time', 'gamma'], [epoch, loss, model.df.nfe, timelist[-1] - timelist[-2], model.df.gamma.detach().cpu().numpy()]))
+        print(str_rec(['epoch', 'loss', 'nfe', 'time', 'gamma'],
+                      [epoch, loss, model.df.nfe, timelist[-1] - timelist[-2], model.df.gamma.detach().cpu().numpy()]))
 
+from matplotlib import pyplot as plt
 
-from matplotlib import  pyplot as plt
 trange = torch.arange(tssz + trsz * 1.0)
 plt.plot(trange, v2_data[:len(trange)].cpu())
 plt.plot(trange, model(None, trange, v2_data[:1].view(1, 1)).view(len(trange), -1)[:, 0].detach().cpu())
