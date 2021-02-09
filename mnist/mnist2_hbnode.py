@@ -156,7 +156,7 @@ downsampling_layers = [
     nn.ReLU(inplace=True),
     nn.Conv2d(64, 64, 4, 2, 1), ]
 
-feature_layers = [initial_velocity(64), NODElayer(HeavyBallNODE(DF(64), None, timescale=0.1))]
+feature_layers = [initial_velocity(64), NODElayer(HeavyBallNODE(DF(64), None))]
 fc_layers = [getx(), norm(64), nn.ReLU(inplace=True), nn.AdaptiveAvgPool2d((1, 1)), Flatten(), nn.Linear(64, 10)]
 
 model = nn.Sequential(*downsampling_layers, *feature_layers, *fc_layers).to(0)

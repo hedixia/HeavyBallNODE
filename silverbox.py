@@ -41,13 +41,13 @@ class DF(nn.Module):
     def __init__(self, in_channels, out_channels=None):
         super(DF, self).__init__()
         out_channels = in_channels if out_channels is None else out_channels
-        self.fc1 = nn.Linear(in_channels + 1, out_channels)
+        self.fc1 = nn.Linear(2 * in_channels + 1, out_channels, bias=False)
         self.act = nn.ReLU(inplace=False)
 
     def forward(self, t, x):
         v1 = v1_func(t).reshape(-1, 1, 1)
         x = rearrange(x, 'b d c -> b 1 (d c)')
-        z_ = torch.cat((x, v1), dim=2)
+        z_ = torch.cat((x, 0.01 * x ** 3, v1), dim=2)
         out = self.fc1(z_)
         return out
 
@@ -55,27 +55,20 @@ class DF(nn.Module):
 # from torchdiffeq import odeint
 dim = 1
 hbnodeparams = {
-    'thetaact': nn.Hardtanh(-0.1, 0.1),
-    'gamma_correction': 0,
+    'thetaact': nn.Hardtanh(-10, 10),
 }
-model = NODEintegrate(HeavyBallNODE(DF(dim), **hbnodeparams), initial_velocity(1, dim, 2), tol=args.tol).to(0)
+torch.manual_seed(8)
+model = NODEintegrate(HeavyBallNODE(DF(dim), **hbnodeparams), initial_velocity(1, dim, 2), tol=args.tol,
+                      adjoint=args.adjoint).to(0)
 criteria = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.00)
 print(count_parameters(model))
 
 
-def pretrain(trsz):
-    model.df.nfe = 0
-    predict = model(None, torch.arange(trsz * 1.0) / time_rescale, v2_data[:1].view(1, 1)).view(trsz, -1)[:, 0]
-    loss = criteria(predict, v2_data[:trsz])
-    loss.backward()
-    nn.utils.clip_grad_norm_(model.parameters(), 10.0)
-    optimizer.step()
-
-
 def train(trsz):
     model.df.nfe = 0
-    predict = model(None, torch.arange(trsz * 1.0) / time_rescale, v2_data[:1].view(1, 1)).view(trsz, -1)[:, 0]
+    trange = torch.arange(trsz * 1.0) / time_rescale
+    predict = model(None, trange.to(args.gpu), v2_data[:1].view(1, 1)).view(trsz, -1)[:, 0]
     loss = criteria(predict, v2_data[:trsz])
     loss.backward()
     loss = loss.detach().cpu().numpy()
@@ -85,31 +78,28 @@ def train(trsz):
     return predict, loss
 
 
+recattrname = ['epoch', 'loss', 'nfe', 'floss', 'time', 'gamma']
+
+
 def validation(trsz, tssz):
-    forecast = model(None, (trsz + torch.arange(tssz)) / time_rescale, v2_data[:1].view(1, 1)).view(tssz, -1)[:, 0]
+    trange = (trsz + torch.arange(tssz)) / time_rescale
+    forecast = model(None, trange.to(args.gpu), v2_data[:1].view(1, 1)).view(tssz, -1)[:, 0]
     floss = criteria(forecast, v2_data[trsz:trsz + tssz])
-    print(str_rec(['epoch', 'loss', 'nfe', 'floss', 'time', 'gamma'],
-                  [epoch, loss, model.df.nfe, floss, timelist[-1] - timelist[-2],
-                   model.df.gamma.detach().cpu().numpy()]))
-    # print(model.df.df.fc.weight)
-    plt.plot(v2_data[:500].detach().cpu())
-    plt.plot(predict[:500].detach().cpu())
+    plt.plot(v2_data[:200].detach().cpu())
+    plt.plot(predict[:200].detach().cpu())
     plt.show()
+    timelist.append(time.time())
+    return floss
 
 
-# pretrain
-for epoch in range(50):
-    pretrain(trsz=16)
-
-for epoch in range(20):
-    pretrain(trsz=25)
+timelist = [time.time()]
 
 # train start
-timelist = [time.time()]
 for epoch in range(args.niters):
-    predict, loss = train(trsz=250)
+    predict, loss = train(trsz=1000)
+    floss = None
     if (epoch + 1) % 10 == 0 or epoch == 0:
-        validation(trsz=250, tssz=750)
-    else:
-        print(str_rec(['epoch', 'loss', 'nfe', 'time', 'gamma'],
-                      [epoch, loss, model.df.nfe, timelist[-1] - timelist[-2], model.df.gamma.detach().cpu().numpy()]))
+        floss = validation(trsz=1000, tssz=3000)
+    dtime = timelist[-1] - timelist[-2]
+    gamma = model.df.gamma.detach().cpu().numpy()
+    print(str_rec(recattrname, [epoch, loss, model.df.nfe, floss, dtime, gamma]))

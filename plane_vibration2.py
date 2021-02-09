@@ -79,7 +79,7 @@ tssz = 40
 
 # from torchdiffeq import odeint
 dim = 5
-model = NODEintegrate(HeavyBallNODE(DF(dim, nhid=10), None, timescale=5), initial_velocity(1, dim, 2, nhid=3)).to(0)
+model = NODEintegrate(HeavyBallNODE(DF(dim, nhid=10), None), initial_velocity(1, dim, 2, nhid=3)).to(0)
 # model = NODEintegrate(SONODE(DF(2*dim, dim, nhid=3)), initial_velocity(1, dim, 2, nhid=3)).to(0)
 model_dict = model.state_dict()
 # for i in model_dict:

@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torchdiffeq import odeint_adjoint as odeint
+import torchdiffeq
 import numpy as np
 from einops import rearrange, repeat
 import time

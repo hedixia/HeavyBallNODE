@@ -3,7 +3,7 @@ from basehelper import *
 
 class NODEintegrate(nn.Module):
 
-    def __init__(self, df=None, x0=None, tol=tol):
+    def __init__(self, df=None, x0=None, tol=tol, adjoint=True):
         """
         Create an OdeRnnBase model
             x' = df(x)
@@ -17,6 +17,7 @@ class NODEintegrate(nn.Module):
         self.df = df
         self.x0 = x0
         self.tol = tol
+        self.odeint = torchdiffeq.odeint_adjoint if adjoint else torchdiffeq.odeint
 
     def forward(self, initial_condition, evaluation_times, x0stats=None):
         """
@@ -39,22 +40,22 @@ class NODEintegrate(nn.Module):
 
 
 class NODElayer(nn.Module):
-    def __init__(self, df, evaluation_times=(0.0, 1.0)):
+    def __init__(self, df, evaluation_times=None):
         super(NODElayer, self).__init__()
         self.df = df
-        self.evaluation_times = torch.as_tensor(evaluation_times)
+        self.evaluation_times = evaluation_times
 
     def forward(self, x0):
-        out = odeint(self.df, x0, self.evaluation_times, rtol=tol, atol=tol)
-        if len(self.evaluation_times) == 2:
+        if self.evaluation_times is None:
+            out = odeint(self.df, x0, torch.Tensor([0.0, 1.0]).to(x0.device), rtol=tol, atol=tol)
             return out[1]
         else:
-            return out[1:]
+            out = odeint(self.df, x0, self.evaluation_times.to(x0.device), rtol=tol, atol=tol)
+            return out
 
     def to(self, device, *args, **kwargs):
         super().to(device, *args, **kwargs)
         self.evaluation_times.to(device)
-
 
 
 class ODERNN(nn.Module):
@@ -99,10 +100,10 @@ class SONODE(NODE):
 
 
 class HeavyBallNODE(NODE):
-    def __init__(self, df, thetaact=None, thetalin=None, gamma_guess=-3.0, gammaact='sigmoid', gamma_correction=0):
+    def __init__(self, df, thetaact=None, thetalin=None, gamma_guess=-3.0, gamma_act='sigmoid', gamma_correction=0):
         super().__init__(df)
         self.gamma = nn.Parameter(torch.Tensor([gamma_guess]))
-        self.gammaact = nn.Sigmoid() if gammaact == 'sigmoid' else gammaact
+        self.gammaact = nn.Sigmoid() if gamma_act == 'sigmoid' else gamma_act
         self.thetaact = nn.Identity() if thetaact is None else thetaact
         self.thetalin = Zeronet() if thetalin is None else thetalin
         self.gamma_correction = gamma_correction
@@ -129,9 +130,8 @@ class HeavyBallNODE(NODE):
 
 
 class HardBoundHeavyBall(HeavyBallNODE):
-    def __init__(self, df, thetaact=None, thetalin=None, gamma_guess=-3.0, gammaact='sigmoid', gamma_correction=0,
-                 normf=0, normbound=100):
-        super().__init__(df, thetaact=thetaact, thetalin=thetalin, gamma_guess=gamma_guess, gammaact=gammaact,
+    def __init__(self, df, normbound, normf=False, thetaact=None, thetalin=None, gamma_guess=-3.0, gamma_act='sigmoid', gamma_correction=0):
+        super().__init__(df, thetaact=thetaact, thetalin=thetalin, gamma_guess=gamma_guess, gamma_act=gamma_act,
                          gamma_correction=gamma_correction)
         assert normbound >= 1
         self.normf = normf if normf else TVnorm()
