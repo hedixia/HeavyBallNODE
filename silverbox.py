@@ -60,6 +60,10 @@ hbnodeparams = {
 torch.manual_seed(8)
 model = NODEintegrate(HeavyBallNODE(DF(dim), **hbnodeparams), initial_velocity(1, dim, 2), tol=args.tol,
                       adjoint=args.adjoint).to(0)
+model_dict = model.state_dict()
+for i in model_dict:
+    model_dict[i] *= 0
+model.load_state_dict(model_dict)
 criteria = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.00)
 print(count_parameters(model))
