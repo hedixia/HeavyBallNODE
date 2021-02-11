@@ -3,7 +3,7 @@ from basehelper import *
 
 class NODEintegrate(nn.Module):
 
-    def __init__(self, df=None, x0=None, tol=tol, adjoint=True):
+    def __init__(self, df=None, x0=None, tol=tol, adjoint=True, evaluation_times=None):
         """
         Create an OdeRnnBase model
             x' = df(x)
@@ -18,8 +18,9 @@ class NODEintegrate(nn.Module):
         self.x0 = x0
         self.tol = tol
         self.odeint = torchdiffeq.odeint_adjoint if adjoint else torchdiffeq.odeint
+        self.evaluation_times = evaluation_times
 
-    def forward(self, initial_condition, evaluation_times, x0stats=None):
+    def forward(self, initial_condition, evaluation_times=None, x0stats=None):
         """
         Evaluate odefunc at given evaluation time
         :param initial_condition: shape [batch, channel, feature]. Set to None while training.
@@ -27,6 +28,7 @@ class NODEintegrate(nn.Module):
         :param x0stats: statistics to compute x0 when self.x0 is a nn.Module, shape required by self.x0
         :return: prediction by ode at evaluation_times, shape [time, batch, channel, feature]
         """
+        evaluation_times = evaluation_times if evaluation_times else self.evaluation_times
         if initial_condition is None:
             initial_condition = self.x0
         if x0stats is not None:

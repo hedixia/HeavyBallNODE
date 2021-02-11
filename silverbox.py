@@ -58,8 +58,8 @@ hbnodeparams = {
     'thetaact': nn.Hardtanh(-10, 10),
 }
 torch.manual_seed(8)
-model = NODEintegrate(HeavyBallNODE(DF(dim), **hbnodeparams), initial_velocity(1, dim, 2), tol=args.tol,
-                      adjoint=args.adjoint).to(0)
+hbnode = HeavyBallNODE(DF(dim), **hbnodeparams)
+model = NODEintegrate(hbnode, initial_velocity(1, dim, 2), tol=args.tol, adjoint=args.adjoint).to(0)
 model_dict = model.state_dict()
 for i in model_dict:
     model_dict[i] *= 0
@@ -85,12 +85,12 @@ def train(trsz):
 recattrname = ['epoch', 'loss', 'nfe', 'floss', 'time', 'gamma']
 
 
-def validation(trsz, tssz):
+def validation(trsz, tssz, plotrange=200):
     trange = (trsz + torch.arange(tssz)) / time_rescale
     forecast = model(None, trange.to(args.gpu), v2_data[:1].view(1, 1)).view(tssz, -1)[:, 0]
     floss = criteria(forecast, v2_data[trsz:trsz + tssz])
-    plt.plot(v2_data[:200].detach().cpu())
-    plt.plot(predict[:200].detach().cpu())
+    plt.plot(v2_data[:plotrange].detach().cpu())
+    plt.plot(predict[:plotrange].detach().cpu())
     plt.show()
     timelist.append(time.time())
     return floss
