@@ -1,0 +1,160 @@
+Train|| iter: 1 , loss: 0.28712964413770986 , acc: 0.9156166911125183 , nfe: 40.204690831556505 , time/iter: 138.13356971740723 s, time: 2.3022283633550007 min, 
+Extra:  {}
+tensor([0.0479], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 1 , loss: 0.11166460812091827 , acc: 0.9663999676704407 , nfe: 20.0 , param cnt: 85930 , 
+Train|| iter: 2 , loss: 0.10530132627182169 , acc: 0.9693166613578796 , nfe: 40.28784648187633 , time/iter: 135.96213102340698 s, time: 4.6832555810610454 min, 
+Extra:  {}
+tensor([0.0485], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 2 , loss: 0.09159259498119354 , acc: 0.9714999794960022 , nfe: 20.0 , param cnt: 85930 , 
+Train|| iter: 3 , loss: 0.0816471205591393 , acc: 0.9755333662033081 , nfe: 40.3134328358209 , time/iter: 132.53619241714478 s, time: 6.999078516165415 min, 
+Extra:  {}
+tensor([0.0498], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 3 , loss: 0.07752731442451477 , acc: 0.9757999777793884 , nfe: 20.0 , param cnt: 85930 , 
+Train|| iter: 4 , loss: 0.06048823114651353 , acc: 0.9811166524887085 , nfe: 40.40298507462686 , time/iter: 132.84759330749512 s, time: 9.319856576124828 min, 
+Extra:  {}
+tensor([0.0500], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 4 , loss: 0.05421428754925728 , acc: 0.9821999669075012 , nfe: 20.0 , param cnt: 85930 , 
+Train|| iter: 5 , loss: 0.04864957846049815 , acc: 0.9844333529472351 , nfe: 40.63326226012793 , time/iter: 133.63739132881165 s, time: 11.653902924060821 min, 
+Extra:  {}
+tensor([0.0516], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 5 , loss: 0.05306929349899292 , acc: 0.9842000007629395 , nfe: 20.0 , param cnt: 85930 , 
+Train|| iter: 6 , loss: 0.04015625666961995 , acc: 0.9870333671569824 , nfe: 40.80597014925373 , time/iter: 133.98451566696167 s, time: 13.993666299184163 min, 
+Extra:  {}
+tensor([0.0526], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 6 , loss: 0.05922893434762955 , acc: 0.9821999669075012 , nfe: 20.0 , param cnt: 85930 , 
+Train|| iter: 7 , loss: 0.03355509792563757 , acc: 0.9888166785240173 , nfe: 41.04904051172708 , time/iter: 134.6130747795105 s, time: 16.343866113821665 min, 
+Extra:  {}
+tensor([0.0537], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 7 , loss: 0.06341094523668289 , acc: 0.9811999797821045 , nfe: 20.0 , param cnt: 85930 , 
+Train|| iter: 8 , loss: 0.029429303557633846 , acc: 0.9900833368301392 , nfe: 41.40085287846482 , time/iter: 135.28961777687073 s, time: 18.705383642514548 min, 
+Extra:  {}
+tensor([0.0543], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 8 , loss: 0.0721389576792717 , acc: 0.9792999625205994 , nfe: 20.0 , param cnt: 85930 , 
+Train|| iter: 9 , loss: 0.025089778371457098 , acc: 0.9911500215530396 , nfe: 43.61407249466951 , time/iter: 143.76202535629272 s, time: 21.208154253164928 min, 
+Extra:  {}
+tensor([0.0555], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 9 , loss: 0.07565420866012573 , acc: 0.9803999662399292 , nfe: 20.0 , param cnt: 85930 , 
+Train|| iter: 10 , loss: 0.019860379477299607 , acc: 0.9935166835784912 , nfe: 45.61620469083156 , time/iter: 152.1836440563202 s, time: 23.851161845525105 min, 
+Extra:  {}
+tensor([0.0562], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 10 , loss: 0.0755409225821495 , acc: 0.9812999963760376 , nfe: 20.0 , param cnt: 85930 , 
+Train|| iter: 11 , loss: 0.01979544828695529 , acc: 0.9930999875068665 , nfe: 46.25586353944563 , time/iter: 154.64615559577942 s, time: 26.53525163332621 min, 
+Extra:  {}
+tensor([0.0573], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 11 , loss: 0.07535344362258911 , acc: 0.9815999865531921 , nfe: 20.0 , param cnt: 85930 , 
+Train|| iter: 12 , loss: 0.015845912860146465 , acc: 0.9944666624069214 , nfe: 46.26865671641791 , time/iter: 154.75271487236023 s, time: 29.22110243240992 min, 
+Extra:  {}
+tensor([0.0582], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 12 , loss: 0.08392588049173355 , acc: 0.9806999564170837 , nfe: 20.0 , param cnt: 85930 , 
+Train|| iter: 13 , loss: 0.015328517092316389 , acc: 0.9944999814033508 , nfe: 46.204690831556505 , time/iter: 154.52417659759521 s, time: 31.90320712327957 min, 
+Extra:  {}
+tensor([0.0591], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 13 , loss: 0.09098107367753983 , acc: 0.9799999594688416 , nfe: 20.0 , param cnt: 85930 , 
+Train|| iter: 14 , loss: 0.01283181704946164 , acc: 0.9954333305358887 , nfe: 46.12153518123667 , time/iter: 154.19076442718506 s, time: 34.57970064083735 min, 
+Extra:  {}
+tensor([0.0603], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 14 , loss: 0.09668164700269699 , acc: 0.9782999753952026 , nfe: 20.0 , param cnt: 85930 , 
+Train|| iter: 15 , loss: 0.013409063505973897 , acc: 0.9954333305358887 , nfe: 46.652452025586356 , time/iter: 155.0366551876068 s, time: 37.270294173558554 min, 
+Extra:  {}
+tensor([0.0615], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 15 , loss: 0.08965270221233368 , acc: 0.9819999933242798 , nfe: 20.0 , param cnt: 85930 , 
+Train|| iter: 16 , loss: 0.010250089519313657 , acc: 0.9963833689689636 , nfe: 46.68443496801706 , time/iter: 155.01942801475525 s, time: 39.96137938102086 min, 
+Extra:  {}
+tensor([0.0620], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 16 , loss: 0.0852700024843216 , acc: 0.982699990272522 , nfe: 20.0 , param cnt: 85930 , 
+Train|| iter: 17 , loss: 0.010900630625580419 , acc: 0.9962500333786011 , nfe: 47.06183368869936 , time/iter: 155.58633732795715 s, time: 42.66115387678146 min, 
+Extra:  {}
+tensor([0.0633], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 17 , loss: 0.11146951466798782 , acc: 0.9785999655723572 , nfe: 20.0 , param cnt: 85930 , 
+Train|| iter: 18 , loss: 0.009987279041997914 , acc: 0.9963666796684265 , nfe: 47.77825159914712 , time/iter: 156.67302083969116 s, time: 45.37905385096868 min, 
+Extra:  {}
+tensor([0.0643], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 18 , loss: 0.08675214648246765 , acc: 0.9815999865531921 , nfe: 20.0 , param cnt: 85930 , 
+Train|| iter: 19 , loss: 0.007549575142768909 , acc: 0.9971666932106018 , nfe: 48.417910447761194 , time/iter: 157.8203830718994 s, time: 48.11609545151393 min, 
+Extra:  {}
+tensor([0.0657], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 19 , loss: 0.10728958249092102 , acc: 0.9799999594688416 , nfe: 26.0 , param cnt: 85930 , 
+Train|| iter: 20 , loss: 0.007564681425277612 , acc: 0.9975666999816895 , nfe: 51.17484008528785 , time/iter: 162.1533808708191 s, time: 50.95207824309667 min, 
+Extra:  {}
+tensor([0.0668], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 20 , loss: 0.10576067864894867 , acc: 0.9817000031471252 , nfe: 26.0 , param cnt: 85930 , 
+Train|| iter: 21 , loss: 0.008857297999009903 , acc: 0.9972167015075684 , nfe: 51.92963752665245 , time/iter: 163.42381691932678 s, time: 53.80924044450124 min, 
+Extra:  {}
+tensor([0.0679], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 21 , loss: 0.1049937829375267 , acc: 0.9818999767303467 , nfe: 26.0 , param cnt: 85930 , 
+Train|| iter: 22 , loss: 0.006709306733186311 , acc: 0.9977999925613403 , nfe: 52.03837953091684 , time/iter: 163.69266891479492 s, time: 56.67095663150152 min, 
+Extra:  {}
+tensor([0.0694], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 22 , loss: 0.11979147791862488 , acc: 0.9801999926567078 , nfe: 26.0 , param cnt: 85930 , 
+Train|| iter: 23 , loss: 0.006337895830557036 , acc: 0.9976000189781189 , nfe: 52.08955223880597 , time/iter: 163.74692940711975 s, time: 59.53347438176473 min, 
+Extra:  {}
+tensor([0.0704], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 23 , loss: 0.12422867119312286 , acc: 0.9787999987602234 , nfe: 26.0 , param cnt: 85930 , 
+Train|| iter: 24 , loss: 0.007066979337094435 , acc: 0.9976833462715149 , nfe: 52.10874200426439 , time/iter: 163.8987786769867 s, time: 62.3985769311587 min, 
+Extra:  {}
+tensor([0.0714], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 24 , loss: 0.1223466619849205 , acc: 0.9820999503135681 , nfe: 26.0 , param cnt: 85930 , 
+Train|| iter: 25 , loss: 0.006616177589400236 , acc: 0.997700035572052 , nfe: 52.11513859275053 , time/iter: 164.07467460632324 s, time: 65.26657497088114 min, 
+Extra:  {}
+tensor([0.0727], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 25 , loss: 0.11772840470075607 , acc: 0.9813999533653259 , nfe: 26.0 , param cnt: 85930 , 
+Train|| iter: 26 , loss: 0.0059044467869089606 , acc: 0.9979667067527771 , nfe: 52.05756929637526 , time/iter: 163.73593378067017 s, time: 68.12884011268616 min, 
+Extra:  {}
+tensor([0.0748], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 26 , loss: 0.1136198341846466 , acc: 0.9819999933242798 , nfe: 26.0 , param cnt: 85930 , 
+Train|| iter: 27 , loss: 0.005478022703483923 , acc: 0.9982333183288574 , nfe: 52.10874200426439 , time/iter: 163.88837027549744 s, time: 70.9937003771464 min, 
+Extra:  {}
+tensor([0.0753], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 27 , loss: 0.11774159967899323 , acc: 0.9828999638557434 , nfe: 26.0 , param cnt: 85930 , 
+Train|| iter: 28 , loss: 0.005368693296843246 , acc: 0.9980500340461731 , nfe: 52.09594882729211 , time/iter: 163.91939330101013 s, time: 73.85917754968007 min, 
+Extra:  {}
+tensor([0.0786], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 28 , loss: 0.11897270381450653 , acc: 0.9809999465942383 , nfe: 26.0 , param cnt: 85930 , 
+Train|| iter: 29 , loss: 0.0048736732905861665 , acc: 0.9983833432197571 , nfe: 52.147121535181235 , time/iter: 163.9611620903015 s, time: 76.72536253929138 min, 
+Extra:  {}
+tensor([0.0789], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 29 , loss: 0.12597987055778503 , acc: 0.9805999994277954 , nfe: 26.0 , param cnt: 85930 , 
+Train|| iter: 30 , loss: 0.006762371896934916 , acc: 0.99795001745224 , nfe: 52.11513859275053 , time/iter: 163.80475616455078 s, time: 79.58883666992188 min, 
+Extra:  {}
+tensor([0.0810], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 30 , loss: 0.1270439475774765 , acc: 0.9821999669075012 , nfe: 26.0 , param cnt: 85930 , 
+Train|| iter: 31 , loss: 0.007556021086442699 , acc: 0.9976166486740112 , nfe: 52.211087420042645 , time/iter: 164.32756185531616 s, time: 82.46108978192011 min, 
+Extra:  {}
+tensor([0.0841], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 31 , loss: 0.12217016518115997 , acc: 0.9835000038146973 , nfe: 26.0 , param cnt: 85930 , 
+Train|| iter: 32 , loss: 0.003091051126085619 , acc: 0.9989666938781738 , nfe: 52.070362473347544 , time/iter: 163.77423405647278 s, time: 85.32415498495102 min, 
+Extra:  {}
+tensor([0.0847], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 32 , loss: 0.12687528133392334 , acc: 0.9835999608039856 , nfe: 26.0 , param cnt: 85930 , 
+Train|| iter: 33 , loss: 0.002854893964999266 , acc: 0.9990666508674622 , nfe: 52.134328358208954 , time/iter: 164.00085878372192 s, time: 88.19103836218515 min, 
+Extra:  {}
+tensor([0.0854], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 33 , loss: 0.135463148355484 , acc: 0.9822999835014343 , nfe: 26.0 , param cnt: 85930 , 
+Train|| iter: 34 , loss: 0.0045414906320795576 , acc: 0.9981833696365356 , nfe: 52.24307036247335 , time/iter: 164.50622630119324 s, time: 91.06630175908407 min, 
+Extra:  {}
+tensor([0.0864], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 34 , loss: 0.1287558376789093 , acc: 0.9818999767303467 , nfe: 26.0 , param cnt: 85930 , 
+Train|| iter: 35 , loss: 0.0049181386097661975 , acc: 0.9984166622161865 , nfe: 52.42217484008529 , time/iter: 165.1639289855957 s, time: 93.9525019645691 min, 
+Extra:  {}
+tensor([0.0893], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 35 , loss: 0.12194645404815674 , acc: 0.9827999472618103 , nfe: 26.0 , param cnt: 85930 , 
+Train|| iter: 36 , loss: 0.0036870195413194994 , acc: 0.9986500144004822 , nfe: 52.09594882729211 , time/iter: 163.8421607017517 s, time: 96.81662629842758 min, 
+Extra:  {}
+tensor([0.0900], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 36 , loss: 0.1467338353395462 , acc: 0.9800999760627747 , nfe: 26.0 , param cnt: 85930 , 
+Train|| iter: 37 , loss: 0.004691534205032055 , acc: 0.9985499978065491 , nfe: 52.153518123667375 , time/iter: 164.08558440208435 s, time: 99.68477516174316 min, 
+Extra:  {}
+tensor([0.0919], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 37 , loss: 0.13002823293209076 , acc: 0.9835000038146973 , nfe: 26.0 , param cnt: 85930 , 
+Train|| iter: 38 , loss: 0.004730745165078625 , acc: 0.9986000061035156 , nfe: 52.11513859275053 , time/iter: 163.96546006202698 s, time: 102.55097504854203 min, 
+Extra:  {}
+tensor([0.0949], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 38 , loss: 0.12970662117004395 , acc: 0.9824999570846558 , nfe: 26.0 , param cnt: 85930 , 
+Train|| iter: 39 , loss: 0.003869536080594256 , acc: 0.9986667037010193 , nfe: 52.18550106609808 , time/iter: 164.26028966903687 s, time: 105.42211426099142 min, 
+Extra:  {}
+tensor([0.0965], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 39 , loss: 0.15021441876888275 , acc: 0.981499969959259 , nfe: 26.0 , param cnt: 85930 , 
+Train|| iter: 40 , loss: 0.004794493412920661 , acc: 0.9983500242233276 , nfe: 52.18550106609808 , time/iter: 164.18235397338867 s, time: 108.29196853240332 min, 
+Extra:  {}
+tensor([0.0973], device='cuda:0', grad_fn=<SigmoidBackward>)
+Test|| iter: 40 , loss: 0.14727938175201416 , acc: 0.982699990272522 , nfe: 26.0 , param cnt: 85930 , 
