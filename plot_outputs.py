@@ -6,14 +6,14 @@ from output_parser import OutputParser
 
 output_data_folder = './hbnode_data'
 datdir = 'mnist_84k'
-#datdir = 'cifar_172k'
+datdir = 'cifar_172k'
 dsname = datdir[:5].upper()
 root = '/'.join([output_data_folder, datdir])
 methodnames = os.listdir(root)
 print('Methods:', methodnames)
 
 
-def plot(xmax, ds, attr, ylim=None, yextra='', psrate=1):
+def plot(xmax, ds, attr, ylim=None, yextra='', psrate=1, ax=plt):
     epoches = np.arange(xmax + 1)
     for method in methodnames:
         cnt = np.zeros(xmax + 1)
@@ -33,15 +33,15 @@ def plot(xmax, ds, attr, ylim=None, yextra='', psrate=1):
                     pass
         vals = np.divide(vals, cnt, out=-np.ones_like(cnt), where=(cnt != 0))
         index = np.argwhere(cnt != 0)
-        plt.plot(epoches[index], vals[index])
+        ax.plot(epoches[index], vals[index])
     if ylim is not None:
-        plt.ylim(*ylim)
-    plt.legend(methodnames)
-    plt.title('{} {} average {}'.format(dsname, ds, attr))
-    plt.ylabel(attr + yextra)
-    plt.xlabel('epoch')
-    plt.savefig('{}/image/{}_{}_{}'.format(output_data_folder, dsname, ds, re.sub('/', '_', attr)))
-    plt.show()
+        ax.ylim(*ylim)
+    ax.legend(methodnames)
+    ax.title('{} {} average {}'.format(dsname, ds, attr))
+    ax.ylabel(attr + yextra)
+    ax.xlabel('epoch')
+    ax.savefig('{}/image/{}_{}_{}.svg'.format(output_data_folder, dsname, ds, re.sub('/', '_', attr)))
+    ax.show()
 
 if datdir == 'cifar_172k':
     plot(40, 'train', 'nfe')
