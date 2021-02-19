@@ -28,7 +28,7 @@ class NODEintegrate(nn.Module):
         :param x0stats: statistics to compute x0 when self.x0 is a nn.Module, shape required by self.x0
         :return: prediction by ode at evaluation_times, shape [time, batch, channel, feature]
         """
-        evaluation_times = evaluation_times if evaluation_times else self.evaluation_times
+        evaluation_times = evaluation_times if evaluation_times is not None else self.evaluation_times
         if initial_condition is None:
             initial_condition = self.x0
         if x0stats is not None:

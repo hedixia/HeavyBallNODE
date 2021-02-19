@@ -26,12 +26,12 @@ class initial_velocity(nn.Module):
 
     def __init__(self, in_channels, out_channels, ddim):
         super(initial_velocity, self).__init__()
-        self.fc1 = nn.Linear(in_channels, out_channels * ddim - in_channels, bias=False)
+        self.fc1 = nn.Linear(in_channels, out_channels * ddim - 0*in_channels, bias=False)
         self.ddim = ddim
 
     def forward(self, x0):
         out = self.fc1(torch.ones_like(x0))
-        out = torch.cat([x0, out], dim=1)
+        #out = torch.cat([x0, out], dim=1)
         out = rearrange(out, 'b (d c) ... -> b d c ...', d=self.ddim)
         return out
 
@@ -70,18 +70,9 @@ print(count_parameters(model))
 # train start
 optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.00)
 
-trsz = 25
-for epoch in range(20):
-    model.df.nfe = 0
-    predict = model(None, torch.arange(trsz * 1.0) / time_rescale, v2_data[:1].view(1, 1)).view(trsz, -1)[:, 0]
-    loss = criteria(predict, v2_data[:trsz])
-    loss.backward()
-    loss = loss.detach().cpu().numpy()
-    nn.utils.clip_grad_norm_(model.parameters(), 10.0)
-    optimizer.step()
 
-trsz = 250
-tssz = 750
+trsz = 1000
+tssz = 3000
 
 timelist = [time.time()]
 for epoch in range(300):
