@@ -1,3 +1,6 @@
+from os import  path
+import sys
+sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 import argparse
 
 from anode_data_loader import mnist
@@ -101,6 +104,25 @@ class predictionlayer(nn.Module):
         return x
 
 
+class tv4node(nn.Module):
+    osize = 1
+
+    def forward(self, t, x, v):
+        return torch.norm(v.reshape(v.shape[0], -1), p=2, dim=1)
+
+class tvSequential(nn.Sequential):
+    def __init__(self, ic, layer, predict):
+        super(tvSequential, self).__init__(ic, layer, predict)
+        self.ic = ic
+        self.layer = layer
+        self.predict = predict
+
+    def forward(self, x):
+        x = self.ic(x)
+        x, rec = self.layer(x)
+        out = self.predict(x)
+        return out, rec
+
 trdat, tsdat = mnist()
 
 
@@ -136,32 +158,43 @@ def model_gen(name):
         model = nn.Sequential(hbnode_initial_velocity(1, dim, nhid),
                               layer, predictionlayer(dim, truncate=True)).to(device=args.gpu)
     elif name == 'ghbnode':
-        dim = 5
-        nhid = 50
-        layer = NODElayer(HeavyBallNODE(DF(dim, nhid), thetaact=nn.Hardtanh(-3, 3), gamma_correction=1))
+        dim = 6
+        nhid = 45
+        layer = NODElayer(HeavyBallNODE(DF(dim, nhid), actv_h=nn.Tanh(), corr=1.0))
         model = nn.Sequential(hbnode_initial_velocity(1, dim, nhid),
                               layer, predictionlayer(dim, truncate=True)).to(device=args.gpu)
+    elif name == 'avnode':
+        dim = 6
+        nhid = 64
+        layer = NODElayer(NODE(DF(dim, nhid)), shape=(1, 6, 28, 28), recf=tv4node())
+        model = tvSequential(anode_initial_velocity(1, dim),
+                              layer, predictionlayer(dim))
+    elif name == 'areg':
+        dim = 6
+        nhid = 64
+        layer = NODElayer(NODE(DF(dim, nhid)))
+        model = nn.Sequential(anode_initial_velocity(1, dim),
+                              layer, predictionlayer(dim))
     else:
         print('model {} not supported.'.format(name))
         model = None
     return model.to(args.gpu)
 
 
-names = ['node', 'anode', 'sonode', 'sonode2', 'hbnode', 'ghbnode']
-
-
+# names = ['node', 'anode', 'sonode', 'sonode2', 'hbnode', 'ghbnode']
+names = ['ghbnode']
 
 dat = []
-for name in ['sonode2']:
+for name in ['ghbnode']:
     runnum = name[:3]
-    log = open('./output/mnist/log_{}.txt'.format(runnum), 'w')
-    datfile = open('./output/mnist/mnist_dat_{}.txt'.format(runnum), 'wb')
+    log = open('output/mnist/log_{}.txt'.format(runnum), 'w')
+    datfile = open('output/mnist/mnist_dat_{}.txt'.format(runnum), 'wb')
     for i in range(5):
         model = model_gen(name)
         print(name, count_parameters(model), *[count_parameters(i) for i in model])
-        optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.000)
+        optimizer = optim.Adam(model.parameters(), lr=args.lr/2, weight_decay=0.000)
         lrscheduler = torch.optim.lr_scheduler.StepLR(optimizer, 200, 0.9)
-        #train_out = train(model, optimizer, trdat, tsdat, args, evalfreq=1)
+        # train_out = train(model, optimizer, trdat, tsdat, args, evalfreq=1)
         train_out = train(model, optimizer, trdat, tsdat, args, evalfreq=1, stdout=log)
         dat.append([name, i, train_out])
         log.writelines(['\n'] * 5)

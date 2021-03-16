@@ -51,7 +51,7 @@ class DF(nn.Module):
         out = self.fc1(z_)
         return out
 
-
+torch.manual_seed(8)
 # from torchdiffeq import odeint
 dim = 1
 hbnodeparams = {
@@ -60,8 +60,8 @@ hbnodeparams = {
 }
 model = NODEintegrate(HeavyBallNODE(DF(dim), **hbnodeparams), initial_velocity(1, dim, 2), tol=args.tol).to(0)
 model_dict = model.state_dict()
-# for i in model_dict:
-# model_dict[i] *= 0.01
+for i in model_dict:
+    model_dict[i] *= 0.01
 # model_dict[i] -= 0.2
 model.load_state_dict(model_dict)
 criteria = nn.MSELoss()
@@ -91,8 +91,8 @@ for epoch in range(300):
                       [epoch, loss, model.df.nfe, floss, timelist[-1] - timelist[-2],
                        model.df.gamma.detach().cpu().numpy()]))
         # print(model.df.df.fc.weight)
-        plt.plot(v2_data[:500].detach().cpu())
-        plt.plot(predict[:500].detach().cpu())
+        plt.plot(v2_data[:1200].detach().cpu())
+        plt.plot(predict[:1200].detach().cpu())
         plt.show()
     else:
         print(str_rec(['epoch', 'loss', 'nfe', 'time', 'gamma'],

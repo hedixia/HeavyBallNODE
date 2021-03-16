@@ -1,9 +1,31 @@
 from basehelper import *
 
 
+class dfwrapper(nn.Module):
+    def __init__(self, df, shape, recf=None):
+        super(dfwrapper, self).__init__()
+        self.df = df
+        self.shape = shape
+        self.recf = recf
+
+    def forward(self, t, x):
+        bsize = x.shape[0]
+        if self.recf:
+            x = x[:, :-self.recf.osize].reshape(bsize, *self.shape)
+            dx = self.df(t, x)
+            dr = self.recf(t, x, dx).reshape(bsize, -1)
+            dx = dx.reshape(bsize, -1)
+            dx = torch.cat([dx, dr], dim=1)
+        else:
+            x = x.reshape(bsize, *self.shape)
+            dx = self.df(t, x)
+            dx = dx.reshape(bsize, -1)
+        return dx
+
+
 class NODEintegrate(nn.Module):
 
-    def __init__(self, df=None, x0=None, tol=tol, adjoint=True, evaluation_times=None):
+    def __init__(self, df, shape=None, tol=tol, adjoint=True, evaluation_times=None, recf=None):
         """
         Create an OdeRnnBase model
             x' = df(x)
@@ -14,50 +36,61 @@ class NODEintegrate(nn.Module):
             - if x0 is set to be nn.Module then it can be computed through some network.
         """
         super().__init__()
-        self.df = df
-        self.x0 = x0
+        self.df = dfwrapper(df, shape, recf) if shape else df
         self.tol = tol
         self.odeint = torchdiffeq.odeint_adjoint if adjoint else torchdiffeq.odeint
-        self.evaluation_times = evaluation_times
+        self.evaluation_times = evaluation_times if evaluation_times else torch.Tensor([0.0, 1.0])
+        self.shape = shape
+        self.recf = recf
+        if recf:
+            assert shape is not None
 
-    def forward(self, initial_condition, evaluation_times=None, x0stats=None):
+    def forward(self, x0):
         """
         Evaluate odefunc at given evaluation time
-        :param initial_condition: shape [batch, channel, feature]. Set to None while training.
+        :param x0: shape [batch, channel, feature]. Set to None while training.
         :param evaluation_times: time stamps where method evaluates, shape [time]
         :param x0stats: statistics to compute x0 when self.x0 is a nn.Module, shape required by self.x0
         :return: prediction by ode at evaluation_times, shape [time, batch, channel, feature]
         """
-        evaluation_times = evaluation_times if evaluation_times is not None else self.evaluation_times
-        if initial_condition is None:
-            initial_condition = self.x0
-        if x0stats is not None:
-            initial_condition = self.x0(x0stats)
-        out = odeint(self.df, initial_condition, evaluation_times, rtol=self.tol, atol=self.tol)
-        return out
+        bsize = x0.shape[0]
+        if self.shape:
+            assert x0.shape[1:] == torch.Size(self.shape), \
+                'Input shape {} does not match with model shape {}'.format(x0.shape[1:], self.shape)
+            x0 = x0.reshape(bsize, -1)
+            if self.recf:
+                reczeros = torch.zeros_like(x0[:, :1])
+                reczeros = repeat(reczeros, 'b 1 -> b c', c=self.recf.osize)
+                x0 = torch.cat([x0, reczeros], dim=1)
+            out = odeint(self.df, x0, self.evaluation_times, rtol=self.tol, atol=self.tol)
+            if self.recf:
+                rec = out[-1, :, -self.recf.osize:]
+                out = out[:, :, :-self.recf.osize]
+                out = out.reshape(-1, bsize, *self.shape)
+                return out, rec
+            else:
+                return out
+        else:
+            out = odeint(self.df, x0, self.evaluation_times, rtol=self.tol, atol=self.tol)
+            return out
 
     @property
     def nfe(self):
         return self.df.nfe
 
-
-class NODElayer(nn.Module):
-    def __init__(self, df, evaluation_times=None):
-        super(NODElayer, self).__init__()
-        self.df = df
-        self.evaluation_times = evaluation_times
-
-    def forward(self, x0):
-        if self.evaluation_times is None:
-            out = odeint(self.df, x0, torch.Tensor([0.0, 1.0]).to(x0.device), rtol=tol, atol=tol)
-            return out[1]
-        else:
-            out = odeint(self.df, x0, self.evaluation_times.to(x0.device), rtol=tol, atol=tol)
-            return out
-
     def to(self, device, *args, **kwargs):
         super().to(device, *args, **kwargs)
         self.evaluation_times.to(device)
+
+
+class NODElayer(NODEintegrate):
+    def forward(self, x0):
+        out = super(NODElayer, self).forward(x0)
+        if isinstance(out, tuple):
+            out, rec = out
+            return out[-1], rec
+        else:
+            return out[-1]
 
 
 class ODERNN(nn.Module):
@@ -102,13 +135,15 @@ class SONODE(NODE):
 
 
 class HeavyBallNODE(NODE):
-    def __init__(self, df, thetaact=None, thetalin=None, gamma_guess=-3.0, gamma_act='sigmoid', gamma_correction=0):
+    def __init__(self, df, actv_h=None, gamma_guess=-3.0, gamma_act='sigmoid', corr=0, corrf=True):
         super().__init__(df)
-        self.gamma = nn.Parameter(torch.Tensor([gamma_guess]))
+        # Momentum parameter gamma
+        self.gamma = Parameter([gamma_guess], frozen=False)
         self.gammaact = nn.Sigmoid() if gamma_act == 'sigmoid' else gamma_act
-        self.thetaact = nn.Identity() if thetaact is None else thetaact
-        self.thetalin = Zeronet() if thetalin is None else thetalin
-        self.gamma_correction = gamma_correction
+        self.corr = Parameter([corr], frozen=corrf)
+
+        # Activation for dh, GHBNODE only
+        self.actv_h = nn.Identity() if actv_h is None else actv_h
 
     def forward(self, t, x):
         """
@@ -124,17 +159,18 @@ class HeavyBallNODE(NODE):
         :return: [theta' m' v'], shape [batch, 3, dim]
         """
         self.nfe += 1
-        theta, m = torch.split(x, 1, dim=1)
-        dtheta = self.thetaact(self.thetalin(theta) - m)
-        dm = self.df(t, theta) - torch.sigmoid(self.gamma) * m
-        dm += self.gamma_correction * theta
-        return torch.cat((dtheta, dm), dim=1)
+        h, m = torch.split(x, 1, dim=1)
+        dh = self.actv_h(- m)
+        dm = self.df(t, h) - self.gammaact(self.gamma()) * m
+        dm += self.corr() * h
+        return torch.cat((dh, dm), dim=1)
 
 
-class HardBoundHeavyBall(HeavyBallNODE):
-    def __init__(self, df, normbound, normf=False, thetaact=None, thetalin=None, gamma_guess=-3.0, gamma_act='sigmoid', gamma_correction=0):
-        super().__init__(df, thetaact=thetaact, thetalin=thetalin, gamma_guess=gamma_guess, gamma_act=gamma_act,
-                         gamma_correction=gamma_correction)
+class NormedHeavyBall(HeavyBallNODE):
+    def __init__(self, df, normbound=100, normf=False, actv_h=None, gamma_guess=-3.0,
+                 gamma_act='sigmoid', corr=0):
+        super().__init__(df, actv_h=actv_h, gamma_guess=gamma_guess, gamma_act=gamma_act,
+                         corr=corr)
         assert normbound >= 1
         self.normf = normf if normf else TVnorm()
         self.normact = NormAct(normbound)
@@ -142,8 +178,8 @@ class HardBoundHeavyBall(HeavyBallNODE):
     def forward(self, t, x):
         self.nfe += 1
         theta, m, norm = torch.split(x, 1, dim=1)
-        dnorm = self.normf(theta, m)
-        dtheta = self.thetaact(self.thetalin(theta) - m) * self.normact(norm)
+        dnorm = self.normf(theta, m).view(norm.shape)
+        dtheta = self.actv_h(self.thetalin(theta) - m)  # * self.normact(norm)
         dm = self.df(t, theta) - torch.sigmoid(self.gamma) * m
-        dm += self.gamma_correction * theta
+        dm += self.gamma_corr * theta
         return torch.cat((dtheta, dm, dnorm), dim=1)

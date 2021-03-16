@@ -21,6 +21,7 @@ import pickle
 
 tol = 1e-3
 
+
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
@@ -36,15 +37,24 @@ class ArgumentParser:
 def str_rec(names, data, unit=None, sep=', ', presets='{}'):
     if unit is None:
         unit = [''] * len(names)
-    out_str = "{}: {{}} {{{{}}}}" + sep
+    out_str = "{{}}: {} {{{{}}}}" + sep
     out_str *= len(names)
-    out_str = out_str.format(*names)
     out_str = out_str.format(*data)
+    out_str = out_str.format(*names)
     out_str = out_str.format(*unit)
     out_str = presets.format(out_str)
     return out_str
 
 
-
-
-
+def to_float(arr, truncate=False):
+    if isinstance(arr, list):
+        return [to_float(i, truncate=truncate) for i in arr]
+    if arr is None:
+        return None
+    if isinstance(arr, torch.Tensor):
+        arr = arr.detach().cpu().numpy()
+    if isinstance(arr, np.ndarray):
+        arr = arr.flatten()[0]
+    if truncate:
+        arr = int(arr * 10 ** truncate) / 10 ** truncate
+    return arr

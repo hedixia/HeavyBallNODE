@@ -18,7 +18,10 @@ def plot(xmax, ds, attr, ylim=None, yextra='', psrate=1, ax=plt):
     for method in methodnames:
         cnt = np.zeros(xmax + 1)
         vals = np.zeros(xmax + 1)
-        for i in os.listdir('/'.join([root, method])):
+        top = []
+        bot = []
+        fnames = os.listdir('/'.join([root, method]))
+        for i in fnames:
             fname = '/'.join([root, method, i])
             if fname[-4:] != '.txt':
                 continue
@@ -31,6 +34,10 @@ def plot(xmax, ds, attr, ylim=None, yextra='', psrate=1, ax=plt):
                     vals[epoch[j]] += val[j]
                 except IndexError:
                     pass
+            top.append(np.max(val))
+            bot.append(np.min(val))
+        print('{} & {:.1f} $\\pm$ {:.1f}'.format(method, 100*np.mean(top), 100*np.std(top)))
+        print('{} & {:.3f} $\\pm$ {:.3f}'.format(method, np.mean(bot), np.std(bot)))
         vals = np.divide(vals, cnt, out=-np.ones_like(cnt), where=(cnt != 0))
         index = np.argwhere(cnt != 0)
         ax.plot(epoches[index], vals[index])
@@ -42,6 +49,7 @@ def plot(xmax, ds, attr, ylim=None, yextra='', psrate=1, ax=plt):
     ax.xlabel('epoch')
     ax.savefig('{}/image/{}_{}_{}.svg'.format(output_data_folder, dsname, ds, re.sub('/', '_', attr)))
     ax.show()
+
 
 if datdir == 'cifar_172k':
     plot(40, 'train', 'nfe')

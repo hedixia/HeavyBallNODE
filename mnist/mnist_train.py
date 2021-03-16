@@ -32,8 +32,12 @@ def train(model, optimizer, trdat, tsdat, args, evalfreq=2, lrscheduler=False, s
             optimizer.zero_grad()
             # forward in time and solve ode
             pred_y = model(x.to(device=args.gpu))
+            if isinstance(pred_y, tuple):
+                pred_y, rec = pred_y
             # compute loss
-            loss = loss_func(pred_y, y.to(device=args.gpu))
+                loss = loss_func(pred_y, y.to(device=args.gpu)) + 0.1 * torch.mean(rec)
+            else:
+                loss = loss_func(pred_y, y.to(device=args.gpu))
             loss.backward()
             nn.utils.clip_grad_norm_(model.parameters(), 10.0)
             optimizer.step()
@@ -67,6 +71,8 @@ def train(model, optimizer, trdat, tsdat, args, evalfreq=2, lrscheduler=False, s
                 # forward in time and solve ode
                 y = y.to(device=args.gpu)
                 pred_y = model(x.to(device=args.gpu))
+                if isinstance(pred_y, tuple):
+                    pred_y, rec = pred_y
                 pred_l = torch.argmax(pred_y, dim=1)
                 acc += torch.sum((pred_l == y).float())
                 bcnt += 1
