@@ -5,6 +5,7 @@ class Zeronet(nn.Module):
     def forward(self, x):
         return torch.zeros_like(x)
 
+zeronet = Zeronet()
 
 class TVnorm(nn.Module):
     def __init__(self):

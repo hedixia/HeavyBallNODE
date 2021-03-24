@@ -93,19 +93,26 @@ class NODElayer(NODEintegrate):
             return out[-1]
 
 
+'''
 class ODERNN(nn.Module):
-    def __init__(self, node, rnn, evaluation_times):
+    def __init__(self, node, rnn, evaluation_times, nhidden):
         super(ODERNN, self).__init__()
-        self.t = evaluation_times
+        self.t = torch.as_tensor(evaluation_times).float()
+        self.n_t = len(self.t)
         self.node = node
         self.rnn = rnn
+        self.nhidden = (nhidden,) if isinstance(nhidden, int) else nhidden
 
-    def forward(self, x, rnn_feed):
-        out = torch.zeros([len(self.t), *x.shape]).to(x.device())
-        for i in range(1, len(self.t)):
-            temp = self.node(self.t[i - 1:i + 1], out[i - 1])
-            out[i] = self.rnn(temp, rnn_feed[i])
+    def forward(self, x):
+        assert len(x) == self.n_t
+        batchsize = x.shape[1]
+        out = torch.zeros([self.n_t, batchsize, *self.nhidden]).to(x.device)
+        for i in range(1, self.n_t):
+            odesol = odeint(self.node, out[i - 1], self.t[i - 1:i + 1])
+            h_ode = odesol[1]
+            out[i] = self.rnn(h_ode, x[i])
         return out
+'''
 
 
 class NODE(nn.Module):
@@ -114,10 +121,17 @@ class NODE(nn.Module):
         self.__dict__.update(kwargs)
         self.df = df
         self.nfe = 0
+        self.elem_t = None
 
     def forward(self, t, x):
         self.nfe += 1
-        return self.df(t, x)
+        if self.elem_t is None:
+            return self.df(t, x)
+        else:
+            return self.elem_t * self.df(self.elem_t, x)
+
+    def update(self, elem_t):
+        self.elem_t = elem_t.view(*elem_t.shape, 1)
 
 
 class SONODE(NODE):
@@ -155,15 +169,25 @@ class HeavyBallNODE(NODE):
         because v is constant, we change c -> 1/sqrt(v)
         c has to be positive
         :param t: time, shape [1]
-        :param x: [theta m v], shape [batch, 3, dim]
-        :return: [theta' m' v'], shape [batch, 3, dim]
+        :param x: [theta m], shape [batch, 2, dim]
+        :return: [theta' m'], shape [batch, 2, dim]
         """
         self.nfe += 1
         h, m = torch.split(x, 1, dim=1)
         dh = self.actv_h(- m)
         dm = self.df(t, h) - self.gammaact(self.gamma()) * m
-        dm += self.corr() * h
-        return torch.cat((dh, dm), dim=1)
+        dm = dm + self.corr() * h
+        out = torch.cat((dh, dm), dim=1)
+        if self.elem_t is None:
+            return out
+        else:
+            return self.elem_t * out
+
+    def update(self, elem_t):
+        self.elem_t = elem_t.view(*elem_t.shape, 1, 1)
+
+
+HBNODE = HeavyBallNODE
 
 
 class NormedHeavyBall(HeavyBallNODE):
@@ -183,3 +207,77 @@ class NormedHeavyBall(HeavyBallNODE):
         dm = self.df(t, theta) - torch.sigmoid(self.gamma) * m
         dm += self.gamma_corr * theta
         return torch.cat((dtheta, dm, dnorm), dim=1)
+
+
+"""
+class HBNODERNN(ODERNN):
+    def __init__(self, df, rnn, evaluation_times, nhidden, *args, **kwargs):
+        super(HBNODERNN, self).__init__(df, rnn, evaluation_times, nhidden)
+        self.node = HeavyBallNODE(df, *args, **kwargs)
+
+    def forward(self, x):
+        assert len(x) == self.n_t
+        batchsize = x.shape[1]
+        out = torch.zeros([self.n_t, batchsize, 2, *self.nhidden]).to(x.device)
+        for i in range(1, self.n_t):
+            odesol = odeint(self.node, out[i - 1], self.t[i - 1:i + 1])
+            h_ode, m_ode = odesol[1].split(1, dim=1)
+            m_rnn = self.rnn(m_ode, x[i])
+            out[i] = torch.cat([h_ode, m_rnn], dim=1)
+        return out
+"""
+
+
+class ODE_RNN(nn.Module):
+    def __init__(self, ode, rnn, nhid, tol=1e-7):
+        super().__init__()
+        self.ode = ode
+        self.t = torch.Tensor([0, 1])
+        self.nhid = [nhid] if isinstance(nhid, int) else nhid
+        self.rnn = rnn
+        self.tol = tol
+
+    def forward(self, t, x):
+        """
+        --
+        :param t: [time, batch]
+        :param x: [time, batch, ...]
+        :return: [time, batch, *nhid]
+        """
+        n_t, n_b = t.shape
+        h_ode = torch.zeros(n_t + 1, n_b, *self.nhid, device=x.device)
+        for i in range(n_t):
+            self.ode.update(t[i])
+            h_rnn = self.rnn(h_ode[i], x[i])
+            h_ode[i + 1] = odeint(self.ode, h_rnn, self.t, atol=self.tol, rtol=self.tol)[1]
+        return h_ode
+
+
+class ODE_LSTM(ODE_RNN):
+    def __init__(self, ode, lstm_lin, nhid, tol=1e-7):
+        super(ODE_LSTM, self).__init__(ode, lstm_lin, nhid, tol=tol)
+        self.sigmoid = nn.Sigmoid()
+        self.tanh = nn.Tanh()
+
+    def forward(self, t, x):
+        """
+        --
+        :param t: [time, batch]
+        :param x: [time, batch, ...]
+        :return: [time, batch, *nhid]
+        """
+        n_t, n_b = t.shape
+        h_ode = torch.zeros(n_t + 1, n_b, *self.nhid, device=x.device)
+        c_lstm = torch.zeros(n_b, *self.nhid, device=x.device)
+        for i in range(n_t):
+            self.ode.update(t[i])
+            V_lstm = self.rnn(h_ode[i], x[i])
+            z_lstm, i_lstm, f_lstm, o_lstm = torch.split(V_lstm, V_lstm.shape[-1] // 4, dim=-1)
+            z_lstm = self.tanh(z_lstm)
+            i_lstm = self.sigmoid(i_lstm)
+            f_lstm = self.sigmoid(f_lstm + 1)
+            o_lstm = self.sigmoid(o_lstm)
+            c_lstm = z_lstm * i_lstm + c_lstm * f_lstm
+            h_lstm = self.tanh(c_lstm) * o_lstm
+            h_ode[i + 1] = odeint(self.ode, h_lstm, self.t, atol=self.tol, rtol=self.tol)[1]
+        return h_ode
