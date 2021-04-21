@@ -229,15 +229,18 @@ class HBNODERNN(ODERNN):
 
 
 class ODE_RNN(nn.Module):
-    def __init__(self, ode, rnn, nhid, tol=1e-7):
+    def __init__(self, ode, rnn, nhid, ic, rnn_out=False, both=False, tol=1e-7):
         super().__init__()
         self.ode = ode
         self.t = torch.Tensor([0, 1])
         self.nhid = [nhid] if isinstance(nhid, int) else nhid
         self.rnn = rnn
         self.tol = tol
+        self.rnn_out = rnn_out
+        self.ic = ic
+        self.both = both
 
-    def forward(self, t, x):
+    def forward(self, t, x, multiforecast=None):
         """
         --
         :param t: [time, batch]
@@ -246,11 +249,30 @@ class ODE_RNN(nn.Module):
         """
         n_t, n_b = t.shape
         h_ode = torch.zeros(n_t + 1, n_b, *self.nhid, device=x.device)
-        for i in range(n_t):
-            self.ode.update(t[i])
-            h_rnn = self.rnn(h_ode[i], x[i])
-            h_ode[i + 1] = odeint(self.ode, h_rnn, self.t, atol=self.tol, rtol=self.tol)[1]
-        return h_ode
+        h_rnn = torch.zeros(n_t + 1, n_b, *self.nhid, device=x.device)
+        h_ode[0] = h_rnn[0] = self.ic(rearrange(x, 't b c -> b (t c)')).view(h_ode[0].shape)
+        if self.rnn_out:
+            for i in range(n_t):
+                self.ode.update(t[i])
+                h_ode[i] = odeint(self.ode, h_rnn[i], self.t, atol=self.tol, rtol=self.tol)[-1]
+                h_rnn[i + 1] = self.rnn(h_ode[i], x[i])
+            out = (h_rnn,)
+        else:
+            for i in range(n_t):
+                self.ode.update(t[i])
+                h_rnn[i] = self.rnn(h_ode[i], x[i])
+                h_ode[i + 1] = odeint(self.ode, h_rnn[i], self.t, atol=self.tol, rtol=self.tol)[-1]
+            out = (h_ode,)
+
+        if self.both:
+            out = (h_rnn, h_ode)
+
+        if multiforecast is not None:
+            self.ode.update(torch.ones_like((t[0])))
+            forecast = odeint(self.ode, out[-1][-1], multiforecast * 1.0, atol=self.tol, rtol=self.tol)
+            out = (*out, forecast)
+
+        return out
 
 
 class ODE_LSTM(ODE_RNN):
@@ -279,5 +301,6 @@ class ODE_LSTM(ODE_RNN):
             o_lstm = self.sigmoid(o_lstm)
             c_lstm = z_lstm * i_lstm + c_lstm * f_lstm
             h_lstm = self.tanh(c_lstm) * o_lstm
-            h_ode[i + 1] = odeint(self.ode, h_lstm, self.t, atol=self.tol, rtol=self.tol)[1]
+            h_odein = torch.cat([h_ode[i, :, :1], h_lstm[:, 1:]], dim=1)
+            h_ode[i + 1] = odeint(self.ode, h_odein, self.t, atol=self.tol, rtol=self.tol)[1]
         return h_ode

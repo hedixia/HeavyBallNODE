@@ -58,3 +58,6 @@ def to_float(arr, truncate=False):
     if truncate:
         arr = int(arr * 10 ** truncate) / 10 ** truncate
     return arr
+
+class MyClass:
+    pass

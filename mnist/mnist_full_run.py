@@ -2,6 +2,7 @@ from os import  path
 import sys
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 import argparse
+import csv
 
 from anode_data_loader import mnist
 from base import *
@@ -139,13 +140,13 @@ def model_gen(name):
         layer = NODElayer(NODE(DF(dim, nhid)))
         model = nn.Sequential(anode_initial_velocity(1, dim),
                               layer, predictionlayer(dim))
-    elif name == 'sonode':
+    elif name == 'sonode-':
         dim = 1
         nhid = 65
         hblayer = NODElayer(SONODE(DF(2 * dim, nhid, dim)))
         model = nn.Sequential(hbnode_initial_velocity(1, dim, nhid),
                               hblayer, predictionlayer(dim, truncate=True)).to(device=args.gpu)
-    elif name == 'sonode2':
+    elif name == 'sonode':
         dim = 5
         nhid = 50
         hblayer = NODElayer(SONODE(DF(2 * dim, nhid, dim)))
@@ -180,22 +181,25 @@ def model_gen(name):
         model = None
     return model.to(args.gpu)
 
-
-# names = ['node', 'anode', 'sonode', 'sonode2', 'hbnode', 'ghbnode']
-names = ['ghbnode']
+names = ['node', 'anode', 'sonode', 'hbnode', 'ghbnode']
+rec_names = ["model", "test#", "train/test", "iter", "loss", "acc", "forwardnfe", "backwardnfe", "time/iter", "time_elapsed"]
+csvfile = open('../imgdat/outdat0.csv', 'w')
+writer = csv.writer(csvfile)
+writer.writerow(rec_names)
+csvfile.close()
 
 dat = []
-for name in ['ghbnode']:
+for name in names:
     runnum = name[:3]
-    log = open('output/mnist/log_{}.txt'.format(runnum), 'w')
-    datfile = open('output/mnist/mnist_dat_{}.txt'.format(runnum), 'wb')
-    for i in range(5):
+    log = open('../output/mnist/log_{}.txt'.format(runnum), 'w')
+    datfile = open('../output/mnist/mnist_dat_{}.txt'.format(runnum), 'wb')
+    for i in range(3):
         model = model_gen(name)
         print(name, count_parameters(model), *[count_parameters(i) for i in model])
         optimizer = optim.Adam(model.parameters(), lr=args.lr/2, weight_decay=0.000)
         lrscheduler = torch.optim.lr_scheduler.StepLR(optimizer, 200, 0.9)
         # train_out = train(model, optimizer, trdat, tsdat, args, evalfreq=1)
-        train_out = train(model, optimizer, trdat, tsdat, args, evalfreq=1, stdout=log)
+        train_out = train(model, optimizer, trdat, tsdat, args, name, i, evalfreq=1, csvname='../imgdat/outdat0.csv')
         dat.append([name, i, train_out])
         log.writelines(['\n'] * 5)
     pickle.dump(dat, datfile)
