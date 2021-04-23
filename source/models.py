@@ -21,10 +21,12 @@ import models
 
 class DF(nn.Module):
 
-    def __init__(self, in_channels, nhidden, args=None):
+    def __init__(self, in_channels, nhidden, out_channels=None, args=None):
         super(DF, self).__init__()
         self.args = args
         if self.args.model == 'hbnode':
+            in_dim = in_channels
+        if self.args.model == 'ghbnode':
             in_dim = in_channels
         if self.args.model == 'anode':
             in_dim = in_channels
@@ -32,14 +34,16 @@ class DF(nn.Module):
             in_dim =  2*in_channels
         if self.args.model == 'node':
             in_dim = in_channels
-        self.activation = nn.ReLU() #nn.LeakyReLU(0.3)
+            # if out_channels is None:
+            #     out_channels = in_channels
+        self.activation = nn.ReLU(inplace=True) #nn.LeakyReLU(0.3)
         self.fc1 = nn.Conv2d(in_dim + 1, nhidden, kernel_size=1, padding=0)
         self.fc2 = nn.Conv2d(nhidden + 1, nhidden, kernel_size=3, padding=1)
         self.fc3 = nn.Conv2d(nhidden + 1, in_channels, kernel_size=1, padding=0)
 
 
     def forward(self, t, x0):
-        if self.args.model == 'hbnode':
+        if self.args.model == 'hbnode' or self.args.model == 'ghbnode':
             out = rearrange(x0, 'b 1 c x y -> b c x y')
         if self.args.model == 'anode':
             out = rearrange(x0, 'b d c x y -> b (d c) x y')
@@ -60,11 +64,13 @@ class DF(nn.Module):
 
         out = self.fc3(out)
         out = rearrange(out, 'b c x y -> b 1 c x y')
-        if self.args.model == 'hbnode':
+        if self.args.model == 'hbnode' or self.args.model == 'ghbnode':
             return out + self.args.xres * x0
         elif self.args.model == 'anode':
             return out
         elif self.args.model == 'sonode':
+            return out
+        elif self.args.model == 'node':
             return out
 
 class NODEintegrate(nn.Module):

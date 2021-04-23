@@ -76,7 +76,8 @@ def main(argv=None):
     parser.add_argument(
         '--gpu',
         type=int,
-        default=0
+        default=0,
+        help='The GPU device number'
     )
 
     parser.add_argument(
@@ -103,12 +104,20 @@ def main(argv=None):
     gamma = nn.Parameter(torch.tensor([0.0]))
 
     # create the model nodes
-    if args.model == 'hbnode':
+    if args.model == 'ghbnode':
         dim = 12
         hidden = 51
+        args.xres = 1.5
         df = models.DF(dim, hidden, args=args)
         model_layer = models.NODElayer(models.HeavyBallNODE(df, None, thetaact=thetaact, timescale=args.timescale), args=args) 
         iv = models.initial_velocity(3, dim, hidden)
+    elif args.model == 'hbnode':
+        dim = 12
+        hidden = 51
+        args.xres = 0
+        df = models.DF(dim, hidden, args=args)
+        iv = models.initial_velocity(3, dim, hidden)
+        model_layer = models.NODElayer(models.HeavyBallNODE(df, None, thetaact=None, timescale=args.timescale), args=args)
     elif args.model == 'anode':
         dim = 13
         hidden = 64
@@ -134,7 +143,7 @@ def main(argv=None):
         iv,
         model_layer,
         models.predictionlayer(dim)
-    ).to(device=args.gpu)
+        ).to(device=f'cuda:{args.gpu}')
      
     # optimizer
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
