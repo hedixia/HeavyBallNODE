@@ -16,7 +16,7 @@ from torchvision import datasets, transforms
 import sys
 from matplotlib import pyplot as plt
 import pickle
-
+import csv
 # Format [time, batch, diff, vector]
 
 tol = 1e-3
@@ -24,6 +24,21 @@ tol = 1e-3
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+
+def shrink_parameters(model, ratio):
+    model_dict = model.state_dict()
+    for i in model_dict:
+        model_dict[i] *= ratio
+    model.load_state_dict(model_dict)
+    return model
+
+
+def gradnorm(model, p=2):
+    param_normp = [param.grad.data.norm(p) ** p for param in model.parameters() if param.grad is not None]
+    total_normp = sum(param_normp)
+    total_norm = total_normp ** (1 / p)
+    return total_norm
 
 
 class ArgumentParser:
@@ -59,5 +74,52 @@ def to_float(arr, truncate=False):
         arr = int(arr * 10 ** truncate) / 10 ** truncate
     return arr
 
+
 class MyClass:
     pass
+
+
+class Recorder:
+    def __init__(self):
+        self.store = []
+        self.current = dict()
+
+    def __setitem__(self, key, value):
+        for method in ['detach', 'cpu', 'numpy']:
+            if hasattr(value, method):
+                value = getattr(value, method)()
+        if key in self.current:
+            self.current[key].append(value)
+        else:
+            self.current[key] = [value]
+
+    def capture(self, verbose=False):
+        for i in self.current:
+            self.current[i] = np.mean(self.current[i])
+        self.store.append(self.current.copy())
+        self.current = dict()
+        if verbose:
+            for i in self.store[-1]:
+                print('{}: {}'.format(i, self.store[-1][i]))
+        return self.store[-1]
+
+    def tolist(self):
+        labels = set()
+        labels = sorted(labels.union(*self.store))
+        outlist = []
+        for obs in self.store:
+            outlist.append([obs.get(i, np.nan) for i in labels])
+        return labels, outlist
+
+    def writecsv(self, writer):
+        labels, outlist = self.tolist()
+        if isinstance(writer, str):
+            outfile = open(writer, 'w')
+            csvwriter = csv.writer(outfile)
+            csvwriter.writerow(labels)
+            csvwriter.writerows(outlist)
+            outfile.close()
+        else:
+            csvwriter = writer
+            csvwriter.writerow(labels)
+            csvwriter.writerows(outlist)

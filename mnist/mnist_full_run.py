@@ -1,5 +1,6 @@
-from os import  path
+from os import path
 import sys
+
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 import argparse
 import csv
@@ -111,6 +112,7 @@ class tv4node(nn.Module):
     def forward(self, t, x, v):
         return torch.norm(v.reshape(v.shape[0], -1), p=2, dim=1)
 
+
 class tvSequential(nn.Sequential):
     def __init__(self, ic, layer, predict):
         super(tvSequential, self).__init__(ic, layer, predict)
@@ -123,6 +125,7 @@ class tvSequential(nn.Sequential):
         x, rec = self.layer(x)
         out = self.predict(x)
         return out, rec
+
 
 trdat, tsdat = mnist()
 
@@ -161,7 +164,7 @@ def model_gen(name):
     elif name == 'ghbnode':
         dim = 6
         nhid = 45
-        layer = NODElayer(HeavyBallNODE(DF(dim, nhid), actv_h=nn.Tanh(), corr=1.0))
+        layer = NODElayer(HeavyBallNODE(DF(dim, nhid), actv_h=nn.Tanh(), corr=2.0, corrf=False))
         model = nn.Sequential(hbnode_initial_velocity(1, dim, nhid),
                               layer, predictionlayer(dim, truncate=True)).to(device=args.gpu)
     elif name == 'avnode':
@@ -169,7 +172,7 @@ def model_gen(name):
         nhid = 64
         layer = NODElayer(NODE(DF(dim, nhid)), shape=(1, 6, 28, 28), recf=tv4node())
         model = tvSequential(anode_initial_velocity(1, dim),
-                              layer, predictionlayer(dim))
+                             layer, predictionlayer(dim))
     elif name == 'areg':
         dim = 6
         nhid = 64
@@ -181,8 +184,11 @@ def model_gen(name):
         model = None
     return model.to(args.gpu)
 
-names = ['node', 'anode', 'sonode', 'hbnode', 'ghbnode']
-rec_names = ["model", "test#", "train/test", "iter", "loss", "acc", "forwardnfe", "backwardnfe", "time/iter", "time_elapsed"]
+
+#names = ['node', 'anode', 'sonode', 'hbnode', 'ghbnode']
+names = ['ghbnode']
+rec_names = ["model", "test#", "train/test", "iter", "loss", "acc", "forwardnfe", "backwardnfe", "time/iter",
+             "time_elapsed"]
 csvfile = open('../imgdat/outdat0.csv', 'w')
 writer = csv.writer(csvfile)
 writer.writerow(rec_names)
@@ -196,7 +202,7 @@ for name in names:
     for i in range(3):
         model = model_gen(name)
         print(name, count_parameters(model), *[count_parameters(i) for i in model])
-        optimizer = optim.Adam(model.parameters(), lr=args.lr/2, weight_decay=0.000)
+        optimizer = optim.Adam(model.parameters(), lr=args.lr / 2, weight_decay=0.000)
         lrscheduler = torch.optim.lr_scheduler.StepLR(optimizer, 200, 0.9)
         # train_out = train(model, optimizer, trdat, tsdat, args, evalfreq=1)
         train_out = train(model, optimizer, trdat, tsdat, args, name, i, evalfreq=1, csvname='../imgdat/outdat0.csv')

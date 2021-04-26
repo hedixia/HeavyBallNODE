@@ -13,69 +13,82 @@ def fcriteria(a, b):
     return d2.mean(dim=1)
 
 
-def trainpv(model, fname, mname):
-    lr_dict = {0: 0.001, 50: 0.0001}
-    res = True
-    cont = True
+def trainpv(model, fname, mname, niter=200, lr_dict=None):
+    lr_dict = {0: 0.001, 50: 0.0001} if lr_dict is None else lr_dict
+    recorder = Recorder()
     torch.manual_seed(0)
-    model_dict = model.state_dict()
-    for i in model_dict:
-        model_dict[i] *= 0.01
-    model.load_state_dict(model_dict)
-    outfile = open(fname, 'w')
-    outfile.write('res: {}, cont: {}\n'.format(res, cont))
-    outfile.write(model.__str__())
-    outfile.write('\n' * 3)
-    outfile.close()
+    model = shrink_parameters(model, 0.01)
     criteria = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr_dict[0])
     print('Number of Parameters: {}'.format(count_parameters(model)))
-    timelist = [time.time()]
-    for epoch in range(200):
+
+
+
+    for epoch in range(niter):
+
+        recorder['epoch'] = epoch
+
+        # Train
         if epoch in lr_dict:
             optimizer = torch.optim.Adam(model.parameters(), lr=lr_dict[epoch])
-        model.cell.nfe = 0
+
         batchsize = 64
-        losslist = []
         for b_n in range(0, data.train_x.shape[1], batchsize):
+            model.cell.nfe = 0
+            batch_start_time = time.time()
+
+            # Forward pass
             init, predict, forecast = model(data.train_times[:, b_n:b_n + batchsize],
                                             data.train_x[:, b_n:b_n + batchsize],
                                             multiforecast=torch.arange(forelen))
             loss = criteria(predict, data.train_y[:, b_n:b_n + batchsize])
             loss = loss + criteria(init, data.train_x[:, b_n:b_n + batchsize])
             lossf = criteria(forecast, data.trext[:, b_n:b_n + batchsize])
-            total_loss = loss * 0.1 + lossf
+            total_loss = loss * 0.0 + lossf
+            recorder['forward_time'] = time.time() - batch_start_time
+            recorder['forward_nfe'] = model.cell.nfe
+            recorder['train_loss'] = loss
+            recorder['train_forecast_loss'] = lossf
+
+            # Backward pass
             total_loss.backward()
+            recorder['model_gradient_2norm']= gradnorm(model)
+            recorder['cell_gradient_2norm'] = gradnorm(model.cell)
+            recorder['ic_gradient_2norm'] = gradnorm(model.ic)
             nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            losslist.append(loss.detach().cpu().numpy())
             optimizer.step()
-        tloss = np.mean(losslist)
-        timelist.append(time.time())
-        nfe = model.cell.nfe / len(range(0, data.train_x.shape[1], batchsize))
+            recorder['mean_batch_time'] = time.time() - batch_start_time
+            recorder['mean_batch_nfe'] = model.cell.nfe
+
+        # Validation
         if epoch == 0 or (epoch + 1) % 1 == 0:
             model.cell.nfe = 0
+            validation_start_time = time.time()
             init, predict, forecast = model(data.valid_times, data.valid_x, multiforecast=torch.arange(forelen))
             vloss = criteria(predict, data.valid_y)
             vloss = vloss + criteria(init, data.valid_x)
             vloss = vloss.detach().cpu().numpy()
             vfloss = fcriteria(forecast, data.vaext).detach().cpu().numpy()
-            outfile = open(fname, 'a')
-            outstr = str_rec(['epoch', 'tloss', 'nfe', 'vloss', 'vfloss', 'time'],
-                             [epoch, tloss, nfe, vloss, vfloss, timelist[-1] - timelist[-2]])
-            print(outstr)
-            outfile.write(outstr + '\n')
-            outfile.close()
+            recorder['validation_loss'] = vloss
+            recorder['validation_foreast_loss'] = vfloss
+            recorder['validation_nfe'] = model.cell.nfe
+            recorder['validation_time'] = time.time() - validation_start_time
+
+        # Test
         if epoch == 0 or (epoch + 1) % 1 == 0:
             model.cell.nfe = 0
+            test_start_time = time.time()
             init, predict, forecast = model(data.test_times, data.test_x, multiforecast=torch.arange(forelen))
             sloss = criteria(predict, data.test_y)
             sloss = sloss + criteria(init, data.test_x)
             sloss = sloss.detach().cpu().numpy()
             sfloss = fcriteria(forecast, data.tsext).detach().cpu().numpy()
-            outfile = open(fname, 'a')
-            outstr = str_rec(['epoch', 'nfe', 'sloss', 'sfloss', 'time'],
-                             [epoch, model.cell.nfe, sloss, sfloss, timelist[-1] - timelist[-2]])
-            print(outstr)
-            outfile.write(outstr + '\n')
-            outfile.close()
-            torch.save(model.state_dict(), mname)
+            recorder['test_loss'] = sloss
+            recorder['test_forecast_loss'] = sfloss
+            recorder['test_nfe'] = model.cell.nfe
+            recorder['test_time'] = time.time() - test_start_time
+
+        recorder.capture(verbose=True)
+
+    recorder.writecsv(fname)
+    torch.save(model.state_dict(), mname)

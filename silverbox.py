@@ -39,18 +39,19 @@ def v2_vfunc(time):
 
 class initial_velocity(nn.Module):
 
-    def __init__(self, in_channels, out_channels, ddim, zpad=0):
+    def __init__(self, in_channels, out_channels, ddim, zeropad=False):
         super(initial_velocity, self).__init__()
         self.fc1 = nn.Linear(in_channels, out_channels * ddim - 0 * in_channels, bias=False)
         self.ddim = ddim
-        self.zpad = zpad
+        self.zeropad = zeropad
 
     def forward(self, x0):
         out = self.fc1(torch.ones_like(x0))
         # out = torch.cat([x0, out], dim=1)
+        out[:, 0] = x0
+        if self.zeropad:
+            out[:, 1] = 0
         out = rearrange(out, 'b (d c) ... -> b d c ...', d=self.ddim)
-        if self.zpad > 0:
-            out = torch.cat([out, torch.zeros_like(out[:, :self.zpad])], dim=1)
         return out
 
 
@@ -70,76 +71,67 @@ class DF(nn.Module):
         return out
 
 
-# from torchdiffeq import odeint
-dim = 1
-hbnodeparams = {
-    'thetaact': nn.Identity(),
-    'gamma_correction': 0.5,
-}
+class MODEL(nn.Module):
+    def __init__(self, ode, ic):
+        super(MODEL, self).__init__()
+        self.ode = ode
+        self.ic = ic
+
+    def forward(self, x, t):
+        t = torch.Tensor([-1e-7, *t])
+        ic = self.ic(x)
+        out = odeint(self.ode, ic, t, rtol=1e-7, atol=1e-7)[1:]
+        return out
+
+
 torch.manual_seed(8)
-# hbnode = HeavyBallNODE(DF(dim), **hbnodeparams)
-# model = NODEintegrate(hbnode, initial_velocity(1, dim, 2), tol=args.tol, adjoint=args.adjoint).to(0)
-hbnode = HeavyBallNODE(DF(dim), **hbnodeparams)
-nint = NODEintegrate(hbnode, shape=[2, 1], recf=Vdiff(), tol=args.tol, adjoint=args.adjoint)
-model = nn.Sequential(initial_velocity(1, dim, 2), nint).to(0)
-model_dict = model.state_dict()
-for i in model_dict:
-    if i != '1.df.df.gamma':
-        model_dict[i] *= 0
-model.load_state_dict(model_dict)
-optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.00)
-lrscheduler = torch.optim.lr_scheduler.StepLR(optimizer, 10, 0.9)
-print('Number of Parameters:', count_parameters(model))
-MSELoss = nn.MSELoss()
-
-def TVLoss(input_tensor_1, input_tensor_2):
-    tlen = input_tensor_1.shape[0]
-    error_tensor = input_tensor_1 - input_tensor_2
-    diff_tensor = (torch.roll(error_tensor, -1, 0) - error_tensor)[:-1]
-    diff_norm = torch.norm(diff_tensor, p=1) / (tlen - 1)
-    return diff_norm
-
-
-def train(trsz):
-    model[1].df.nfe = 0
-    model[1].evaluation_times = torch.arange(trsz * 1.0) / time_rescale
-    predict, rec = model(v2_data[:1].reshape(1, 1))
-    predict = predict.view(trsz, -1)
-    mseloss = MSELoss(predict[:, 0], v2_data[:trsz])
-    tvloss = rec * 0.001
-    loss = mseloss + 0.3 * tvloss
-    loss.backward()
-    loss, mseloss, tvloss = to_float([loss, mseloss, tvloss], 5)
-    nn.utils.clip_grad_norm_(model.parameters(), 10.0)
-    optimizer.step()
-    timelist.append(time.time())
-    return predict, loss, (mseloss, tvloss)
-
-
-recattrname = ['epoch', 'loss', 'mse', 'tvloss', 'nfe', 'floss', 'time', 'gamma']
-
-
-def validation(trsz, tssz, plotrange=1000):
-    model[1].evaluation_times = (trsz + torch.arange(tssz)) / time_rescale
-    forecast = model(v2_data[:1].reshape(1, 1))[0].view(tssz, -1)[:, 0]
-    floss = MSELoss(forecast, v2_data[trsz:trsz + tssz])
-    plt.plot(v2_data[:plotrange].detach().cpu())
-    plt.plot(predict[:plotrange, 0].detach().cpu())
-    plt.show()
-    timelist.append(time.time())
-    return floss
-
-
-timelist = [time.time()]
+dim = 1
+modelname = 'SONODE'
+fname = 'output/sb/direct/' + modelname
+if modelname == 'HBNODE':
+    ode = HeavyBallNODE(DF(dim), corr=0.1, corrf=False)
+    ic = initial_velocity(1, dim, 2)
+elif modelname == 'SONODE':
+    ode = SONODE(DF(2 * dim, dim))
+    ic = initial_velocity(1, dim, 2)
+else:
+    ode = NODE(DF(2))
+    ic = initial_velocity(1, dim + 1, 1, zeropad=True)
+model = shrink_parameters(MODEL(ode, ic), 0.001)
+print('Number of Parameters: {}'.format(count_parameters(model)))
 
 # train start
-for epoch in range(args.niters):
-    predict, loss, (mseloss, tvloss) = train(trsz=1000)
-    floss = None
-    if (epoch + 1) % 10 == 0 or epoch == 0:
-        floss = validation(trsz=1000, tssz=3000)
-    dtime = to_float(timelist[-1] - timelist[-2], 5)
-    gamma = to_float(model[1].df.df.gamma, 5)
-    floss = to_float(floss, 5)
-    print(str_rec(recattrname, [epoch, loss, mseloss, tvloss, model[1].df.nfe, floss, dtime, gamma]))
-    print(model[1].df.df.df.fc1.weight.detach())
+trsz = 1000
+tssz = 3000
+optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=0.00)
+criteria = nn.MSELoss()
+rec = Recorder()
+
+for epoch in range(300):
+    rec['epoch'] = epoch
+    ode.nfe = 0
+    epoch_start_time = time.time()
+
+    # Train Forward
+    predict = model(v2_data[:1].view(1, 1), torch.arange(trsz)).view(trsz, -1)[:, 0]
+    loss = criteria(predict, v2_data[:trsz])
+    rec['forward_nfe'] = ode.nfe
+
+    # Train Backward
+    loss.backward()
+    rec['epoch_nfe'] = ode.nfe
+    rec['train_loss'] = loss.detach().cpu().numpy()
+    nn.utils.clip_grad_norm_(model.parameters(), 10.0)
+    optimizer.step()
+    rec['train_time'] = time.time() - epoch_start_time
+
+    if (epoch + 10) % 10 == 0:
+        ode.nfe = 0
+        forecast = model(v2_data[:1].view(1, 1), trsz + torch.arange(tssz)).view(tssz, -1)[:, 0]
+        floss = criteria(forecast, v2_data[trsz:trsz + tssz])
+        rec['forecast_loss'] = floss.detach().cpu().numpy()
+        rec['test_nfe'] = ode.nfe
+
+    rec.capture(verbose=True)
+
+rec.writecsv(fname)

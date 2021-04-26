@@ -66,4 +66,4 @@ class MODEL(nn.Module):
 
 
 if __name__ == '__main__':
-    trainpv(MODEL(), 'output/pv/log_hb0.txt', 'output/pv_hbnode_rnn.mdl')
+    trainpv(MODEL(), 'output/pv/log_hb0.csv', 'output/pv_hbnode_rnn.mdl')
