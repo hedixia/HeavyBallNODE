@@ -79,7 +79,7 @@ def train(model, optimizer, trdat, tsdat, args):
     time_arr = np.zeros(args.niters)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1000, gamma=0.95)
     outlist = []
-    csvfile = open(f'../results/cifar/general/{args.model}/cifar_{args.model}.csv', 'w')
+    csvfile = open(f'../results/cifar/tol/{args.model}/{args.model}_{args.tol}_.csv', 'w')
     writer = csv.writer(csvfile)
     # training
     start_time = time.time()
