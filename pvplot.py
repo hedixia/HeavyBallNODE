@@ -5,7 +5,7 @@ from trainpv import *
 from base import *
 
 spec = 10
-obsnum = 0
+obsnum = 1
 x = data.test_x[:, obsnum:obsnum + 1]
 y = data.test_y[:, obsnum:obsnum + 1]
 t = data.test_times[:, obsnum:obsnum + 1]

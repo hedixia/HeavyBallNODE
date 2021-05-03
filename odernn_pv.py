@@ -5,9 +5,9 @@ class tempf(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
         self.actv = nn.ReLU()
-        self.dense1 = nn.Linear(in_channels, in_channels)
-        self.dense2 = nn.Linear(in_channels, out_channels)
-        self.dense3 = nn.Linear(out_channels, out_channels)
+        self.dense1 = nn.Linear(in_channels, 3*in_channels)
+        self.dense2 = nn.Linear(3*in_channels, 4*out_channels)
+        self.dense3 = nn.Linear(4*out_channels, out_channels)
 
     def forward(self, h, x):
         out = self.dense1(x)
@@ -24,8 +24,6 @@ class temprnn(nn.Module):
         self.actv = nn.ReLU()
         self.dense1 = nn.Linear(in_channels, nhidden)
         self.dense2 = nn.Linear(nhidden, nhidden)
-        self.dense2y = nn.Linear(nhidden, nhidden)
-        self.dense3 = nn.Linear(nhidden, out_channels)
         self.cont = cont
         self.res = res
 
@@ -43,7 +41,7 @@ class temprnn(nn.Module):
 class MODEL(nn.Module):
     def __init__(self, res=False, cont=False):
         super(MODEL, self).__init__()
-        nhid = 31
+        nhid = 21
         self.cell = NODE(tempf(nhid, nhid))
         self.rnn = temprnn(5, nhid, nhid, res=res, cont=cont)
         self.ic = nn.Linear(5 * seqlen, nhid)
@@ -62,4 +60,5 @@ class MODEL(nn.Module):
 
 
 if __name__ == '__main__':
-    trainpv(MODEL(), 'output/pv/log_n0.csv', 'output/pv_node_rnn.mdl')
+    model = MODEL()
+    trainpv(model, 'output/pv/log_n0_{}.csv'.format(count_parameters(model)), 'output/pv_node_rnn.mdl')

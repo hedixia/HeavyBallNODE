@@ -185,8 +185,8 @@ def model_gen(name):
     return model.to(args.gpu)
 
 
-#names = ['node', 'anode', 'sonode', 'hbnode', 'ghbnode']
-names = ['ghbnode']
+names = ['node', 'anode', 'sonode', 'hbnode', 'ghbnode']
+names = names
 rec_names = ["model", "test#", "train/test", "iter", "loss", "acc", "forwardnfe", "backwardnfe", "time/iter",
              "time_elapsed"]
 csvfile = open('../imgdat/outdat0.csv', 'w')

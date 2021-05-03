@@ -2,7 +2,6 @@ from base import *
 from sonode_data_loader import load_data
 
 parser = ArgumentParser()
-parser.add_argument('--tol', type=float, default=1e-3)
 parser.add_argument('--adjoint', type=eval, default=False)
 parser.add_argument('--visualise', type=eval, default=True)
 parser.add_argument('--niters', type=int, default=1000)
@@ -13,7 +12,6 @@ parser.add_argument('--experiment_no', type=int, default=1)
 args = parser.parse_args()
 
 v1_data, v2_data = load_data('./data/sb.csv', skiprows=1, usecols=(0, 1), rescaling=100)
-time_rescale = 1.0
 
 
 class Vdiff(nn.Module):
@@ -38,7 +36,6 @@ def v2_vfunc(time):
 
 
 class initial_velocity(nn.Module):
-
     def __init__(self, in_channels, out_channels, ddim, zeropad=False):
         super(initial_velocity, self).__init__()
         self.fc1 = nn.Linear(in_channels, out_channels * ddim - 0 * in_channels, bias=False)
@@ -56,7 +53,6 @@ class initial_velocity(nn.Module):
 
 
 class DF(nn.Module):
-
     def __init__(self, in_channels, out_channels=None):
         super(DF, self).__init__()
         out_channels = in_channels if out_channels is None else out_channels
@@ -86,7 +82,7 @@ class MODEL(nn.Module):
 
 torch.manual_seed(8)
 dim = 1
-modelname = 'SONODE'
+modelname = 'HBNODE'
 fname = 'output/sb/direct/' + modelname
 if modelname == 'HBNODE':
     ode = HeavyBallNODE(DF(dim), corr=0.1, corrf=False)

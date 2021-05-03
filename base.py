@@ -250,7 +250,8 @@ class ODE_RNN(nn.Module):
         n_t, n_b = t.shape
         h_ode = torch.zeros(n_t + 1, n_b, *self.nhid, device=x.device)
         h_rnn = torch.zeros(n_t + 1, n_b, *self.nhid, device=x.device)
-        h_ode[0] = h_rnn[0] = self.ic(rearrange(x, 't b c -> b (t c)')).view(h_ode[0].shape)
+        if self.ic:
+            h_ode[0] = h_rnn[0] = self.ic(rearrange(x, 't b c -> b (t c)')).view(h_ode[0].shape)
         if self.rnn_out:
             for i in range(n_t):
                 self.ode.update(t[i])

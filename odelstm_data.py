@@ -4,8 +4,9 @@ from einops import  rearrange
 import torch
 
 class Walker2dImitationData:
-    def __init__(self, seq_len):
+    def __init__(self, seq_len, device='cpu'):
         self.seq_len = seq_len
+        self.device = device
         all_files = sorted(
             [
                 os.path.join("data/walker", d)
@@ -67,7 +68,7 @@ class Walker2dImitationData:
             np.stack(y, axis=0),
         )
 
-        return [rearrange(torch.Tensor(i), 'b t ... -> t b ...') for i in L]
+        return [rearrange(torch.Tensor(i), 'b t ... -> t b ...').to(self.device) for i in L]
 
     def perturb_sequences(self, set_x, set_t, set_y):
 

@@ -44,7 +44,7 @@ def trainpv(model, fname, mname, niter=200, lr_dict=None):
             loss = criteria(predict, data.train_y[:, b_n:b_n + batchsize])
             loss = loss + criteria(init, data.train_x[:, b_n:b_n + batchsize])
             lossf = criteria(forecast, data.trext[:, b_n:b_n + batchsize])
-            total_loss = loss * 0.0 + lossf
+            total_loss = loss * 0.1 + lossf
             recorder['forward_time'] = time.time() - batch_start_time
             recorder['forward_nfe'] = model.cell.nfe
             recorder['train_loss'] = loss
@@ -54,7 +54,7 @@ def trainpv(model, fname, mname, niter=200, lr_dict=None):
             total_loss.backward()
             recorder['model_gradient_2norm']= gradnorm(model)
             recorder['cell_gradient_2norm'] = gradnorm(model.cell)
-            recorder['ic_gradient_2norm'] = gradnorm(model.ic)
+            #recorder['ic_gradient_2norm'] = gradnorm(model.ic)
             nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
             recorder['mean_batch_time'] = time.time() - batch_start_time
