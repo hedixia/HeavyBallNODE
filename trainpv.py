@@ -13,7 +13,7 @@ def fcriteria(a, b):
     return d2.mean(dim=1)
 
 
-def trainpv(model, fname, mname, niter=200, lr_dict=None):
+def trainpv(model, fname, mname, niter=500, lr_dict=None, gradrec=None):
     lr_dict = {0: 0.001, 50: 0.0001} if lr_dict is None else lr_dict
     recorder = Recorder()
     torch.manual_seed(0)
@@ -21,8 +21,6 @@ def trainpv(model, fname, mname, niter=200, lr_dict=None):
     criteria = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr_dict[0])
     print('Number of Parameters: {}'.format(count_parameters(model)))
-
-
 
     for epoch in range(niter):
 
@@ -36,6 +34,7 @@ def trainpv(model, fname, mname, niter=200, lr_dict=None):
         for b_n in range(0, data.train_x.shape[1], batchsize):
             model.cell.nfe = 0
             batch_start_time = time.time()
+            model.zero_grad()
 
             # Forward pass
             init, predict, forecast = model(data.train_times[:, b_n:b_n + batchsize],
@@ -49,6 +48,15 @@ def trainpv(model, fname, mname, niter=200, lr_dict=None):
             recorder['forward_nfe'] = model.cell.nfe
             recorder['train_loss'] = loss
             recorder['train_forecast_loss'] = lossf
+
+            # Gradient backprop computation
+            if gradrec is not None:
+                lossf.backward(retain_graph=True)
+                vals = model.ode_rnn.h_ode
+                for i in range(len(vals)):
+                    recorder['grad_{}'.format(i)] = torch.norm(vals[i].grad)
+                model.zero_grad()
+
 
             # Backward pass
             total_loss.backward()

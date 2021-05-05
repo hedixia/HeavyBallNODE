@@ -102,7 +102,6 @@ class ODERNN(nn.Module):
         self.node = node
         self.rnn = rnn
         self.nhidden = (nhidden,) if isinstance(nhidden, int) else nhidden
-
     def forward(self, x):
         assert len(x) == self.n_t
         batchsize = x.shape[1]
@@ -214,7 +213,6 @@ class HBNODERNN(ODERNN):
     def __init__(self, df, rnn, evaluation_times, nhidden, *args, **kwargs):
         super(HBNODERNN, self).__init__(df, rnn, evaluation_times, nhidden)
         self.node = HeavyBallNODE(df, *args, **kwargs)
-
     def forward(self, x):
         assert len(x) == self.n_t
         batchsize = x.shape[1]
@@ -240,7 +238,7 @@ class ODE_RNN(nn.Module):
         self.ic = ic
         self.both = both
 
-    def forward(self, t, x, multiforecast=None, retain_grad=False):
+    def forward(self, t, x, multiforecast=None):
         """
         --
         :param t: [time, batch]
@@ -248,12 +246,10 @@ class ODE_RNN(nn.Module):
         :return: [time, batch, *nhid]
         """
         n_t, n_b = t.shape
-        h_ode = [None] * (n_t + 1)
-        h_rnn = [None] * (n_t + 1)
-        h_ode[-1] = h_rnn[-1] = torch.zeros(n_b, *self.nhid)
-
+        h_ode = torch.zeros(n_t + 1, n_b, *self.nhid, device=x.device)
+        h_rnn = torch.zeros(n_t + 1, n_b, *self.nhid, device=x.device)
         if self.ic:
-            h_ode[0] = h_rnn[0] = self.ic(rearrange(x, 't b c -> b (t c)')).view((n_b, *self.nhid))
+            h_ode[0] = h_rnn[0] = self.ic(rearrange(x, 't b c -> b (t c)')).view(h_ode[0].shape)
         if self.rnn_out:
             for i in range(n_t):
                 self.ode.update(t[i])
@@ -270,22 +266,10 @@ class ODE_RNN(nn.Module):
         if self.both:
             out = (h_rnn, h_ode)
 
-        out = [torch.stack(h, dim=0) for h in out]
-
         if multiforecast is not None:
             self.ode.update(torch.ones_like((t[0])))
             forecast = odeint(self.ode, out[-1][-1], multiforecast * 1.0, atol=self.tol, rtol=self.tol)
             out = (*out, forecast)
-
-        if retain_grad:
-            self.h_ode = h_ode
-            self.h_rnn = h_rnn
-            for i in range(n_t+1):
-                if self.h_ode[i].requires_grad:
-                    self.h_ode[i].retain_grad()
-                if self.h_rnn[i].requires_grad:
-                    self.h_rnn[i].retain_grad()
-
 
         return out
 
@@ -319,3 +303,4 @@ class ODE_LSTM(ODE_RNN):
             h_odein = torch.cat([h_ode[i, :, :1], h_lstm[:, 1:]], dim=1)
             h_ode[i + 1] = odeint(self.ode, h_odein, self.t, atol=self.tol, rtol=self.tol)[1]
         return h_ode
+

@@ -1,4 +1,4 @@
-from base import *
+from old_base import *
 
 from odelstm_data import Walker2dImitationData
 
@@ -104,6 +104,6 @@ for epoch in range(500):
         rec['ts_nfe'] = model.cell.nfe
         rec['ts_loss'] = sloss
     rec.capture(verbose=True)
-    if epoch == 0 or (epoch + 1) % 20 == 0:
-        torch.save(model, 'output/walker_{}_rnn.mdl'.format(modelname))
-        rec.writecsv('output/walker/{}_rnn.csv'.format(modelname))
+    if (epoch + 1) % 20 == 0:
+        torch.save(model, 'output/walker/{}_rnn_{}.mdl'.format(modelname, count_parameters(model)))
+        rec.writecsv('output/walker/{}_rnn_{}.csv'.format(modelname, count_parameters(model)))
