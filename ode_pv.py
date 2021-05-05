@@ -46,4 +46,4 @@ class MODEL(nn.Module):
 
 if __name__ == '__main__':
     model = MODEL()
-    trainpv(model, 'output/pv/log_n_{}.csv'.format(count_parameters(model)), 'output/pv_node.mdl', gradrec=True)
+    trainpv(model, 'results/plane_vibration/log_n_{}.csv'.format(count_parameters(model)), 'results/plane_vibration/pv_node.mdl', gradrec=True, pre_shrink=1.0)

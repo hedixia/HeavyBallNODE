@@ -27,7 +27,7 @@ class MODEL(nn.Module):
     def __init__(self):
         super(MODEL, self).__init__()
         nhid = 23
-        self.cell = HeavyBallNODE(tempf(nhid, nhid), corr=0, corrf=False)
+        self.cell = HeavyBallNODE(tempf(nhid, nhid), corr=1, corrf=False)
         # self.cell = HeavyBallNODE(tempf(nhid, nhid))
         self.ic = nn.Linear(5 * seqlen, 2 * nhid)
         self.rnn = temprnn()
@@ -47,4 +47,4 @@ class MODEL(nn.Module):
 
 if __name__ == '__main__':
     model = MODEL()
-    trainpv(model, 'output/pv/log_hb_{}.csv'.format(count_parameters(model)), 'output/pv_hbnode.mdl', gradrec=True)
+    trainpv(model, 'results/plane_vibration/log_hb_{}.csv'.format(count_parameters(model)), 'results/plane_vibration/pv_hbnode.mdl', gradrec=True, pre_shrink=1.0)

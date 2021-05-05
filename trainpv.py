@@ -13,11 +13,11 @@ def fcriteria(a, b):
     return d2.mean(dim=1)
 
 
-def trainpv(model, fname, mname, niter=500, lr_dict=None, gradrec=None):
+def trainpv(model, fname, mname, niter=500, lr_dict=None, gradrec=None, pre_shrink=0.01):
     lr_dict = {0: 0.001, 50: 0.0001} if lr_dict is None else lr_dict
     recorder = Recorder()
     torch.manual_seed(0)
-    model = shrink_parameters(model, 0.01)
+    model = shrink_parameters(model, pre_shrink)
     criteria = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr_dict[0])
     print('Number of Parameters: {}'.format(count_parameters(model)))
@@ -97,6 +97,7 @@ def trainpv(model, fname, mname, niter=500, lr_dict=None, gradrec=None):
             recorder['test_time'] = time.time() - test_start_time
 
         recorder.capture(verbose=True)
+        print('Epoch {} complete.'.format(epoch))
 
     recorder.writecsv(fname)
     torch.save(model.state_dict(), mname)
