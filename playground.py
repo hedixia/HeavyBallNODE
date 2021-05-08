@@ -10,7 +10,7 @@ class tempr(nn.Module):
 
 cell = NODE(tempc())
 rnn = tempr()
-model = ODE_RNN(cell, rnn, 5)
+model = ODE_RNN_with_Grad_Listener(cell, rnn, 5)
 t = torch.arange(6).reshape(3, 2)
 x = torch.arange(12).reshape(3, 2, 2)
 out = model(t, x)
@@ -19,7 +19,7 @@ print(out.shape)
 
 cell = HeavyBallNODE(tempc())
 rnn = tempr()
-model = ODE_RNN(cell, rnn, (2, 5))
+model = ODE_RNN_with_Grad_Listener(cell, rnn, (2, 5))
 t = torch.arange(6).reshape(3, 2)
 x = torch.arange(12).reshape(3, 2, 2)
 out = model(t, x)

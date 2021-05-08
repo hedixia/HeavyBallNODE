@@ -1,3 +1,8 @@
+import torch
+from einops import rearrange
+from torch import nn
+from torchdiffeq import odeint_adjoint
+
 from basehelper import *
 
 
@@ -228,7 +233,7 @@ class HBNODERNN(ODERNN):
 """
 
 
-class ODE_RNN(nn.Module):
+class ODE_RNN_with_Grad_Listener(nn.Module):
     def __init__(self, ode, rnn, nhid, ic, rnn_out=False, both=False, tol=1e-7):
         super().__init__()
         self.ode = ode
@@ -292,7 +297,7 @@ class ODE_RNN(nn.Module):
         return out
 
 
-class ODE_LSTM(ODE_RNN):
+class ODE_LSTM(ODE_RNN_with_Grad_Listener):
     def __init__(self, ode, lstm_lin, nhid, tol=1e-7):
         super(ODE_LSTM, self).__init__(ode, lstm_lin, nhid, tol=tol)
         self.sigmoid = nn.Sigmoid()
@@ -321,3 +326,52 @@ class ODE_LSTM(ODE_RNN):
             h_odein = torch.cat([h_ode[i, :, :1], h_lstm[:, 1:]], dim=1)
             h_ode[i + 1] = odeint(self.ode, h_odein, self.t, atol=self.tol, rtol=self.tol)[1]
         return h_ode
+
+
+class ODE_RNN(nn.Module):
+    def __init__(self, ode, rnn, nhid, ic, rnn_out=False, both=False, tol=1e-7):
+        super().__init__()
+        self.ode = ode
+        self.t = torch.Tensor([0, 1])
+        self.nhid = [nhid] if isinstance(nhid, int) else nhid
+        self.rnn = rnn
+        self.tol = tol
+        self.rnn_out = rnn_out
+        self.ic = ic
+        self.both = both
+
+    def forward(self, t, x, multiforecast=None):
+        """
+        --
+        :param t: [time, batch]
+        :param x: [time, batch, ...]
+        :return: [time, batch, *nhid]
+        """
+        n_t, n_b = t.shape
+        h_ode = torch.zeros(n_t + 1, n_b, *self.nhid, device=x.device)
+        h_rnn = torch.zeros(n_t + 1, n_b, *self.nhid, device=x.device)
+        if self.ic:
+            h_ode[0] = h_rnn[0] = self.ic(rearrange(x, 't b c -> b (t c)')).view(h_ode[0].shape)
+        if self.rnn_out:
+            for i in range(n_t):
+                self.ode.update(t[i])
+                h_ode[i] = odeint(self.ode, h_rnn[i], self.t, atol=self.tol, rtol=self.tol)[-1]
+                h_rnn[i + 1] = self.rnn(h_ode[i], x[i])
+            out = (h_rnn,)
+        else:
+            for i in range(n_t):
+                self.ode.update(t[i])
+                h_rnn[i] = self.rnn(h_ode[i], x[i])
+                h_ode[i + 1] = odeint(self.ode, h_rnn[i], self.t, atol=self.tol, rtol=self.tol)[-1]
+            out = (h_ode,)
+
+        if self.both:
+            out = (h_rnn, h_ode)
+
+        if multiforecast is not None:
+            self.ode.update(torch.ones_like((t[0])))
+            forecast = odeint(self.ode, out[-1][-1], multiforecast * 1.0, atol=self.tol, rtol=self.tol)
+            out = (*out, forecast)
+
+        return out
+

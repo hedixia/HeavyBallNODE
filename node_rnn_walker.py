@@ -53,7 +53,7 @@ class MODEL(nn.Module):
         nhid = 24
         self.cell = NODE(tempf(nhid, nhid))
         self.rnn = temprnn(17, nhid, nhid)
-        self.ode_rnn = ODE_RNN(self.cell, self.rnn, nhid, None, rnn_out=True, tol=1e-7)
+        self.ode_rnn = ODE_RNN_with_Grad_Listener(self.cell, self.rnn, nhid, None, rnn_out=True, tol=1e-7)
         self.outlayer = tempout(nhid, 17)
 
     def forward(self, t, x):
