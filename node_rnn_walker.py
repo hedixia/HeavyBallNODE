@@ -1,4 +1,4 @@
-from old_base import *
+from base import *
 
 from odelstm_data import Walker2dImitationData
 
@@ -57,11 +57,11 @@ class MODEL(nn.Module):
         self.outlayer = tempout(nhid, 17)
 
     def forward(self, t, x):
-        out = self.ode_rnn(t, x)[0]
+        out = self.ode_rnn(t, x, retain_grad=True)[0]
         out = self.outlayer(out)[:-1]
         return out
 
-
+gradrec = True
 lr_dict = {0: 0.003}
 torch.manual_seed(0)
 model = MODEL().to(0)
@@ -85,8 +85,20 @@ for epoch in range(500):
         loss = criteria(predict, data.train_y[:, b_n:b_n + batchsize])
         rec['forward_nfe'] = model.cell.nfe
         rec['loss'] = loss
+
+        # Gradient backprop computation
+        if gradrec is not None:
+            lossf = criteria(predict[-1], data.train_y[-1, b_n:b_n + batchsize])
+            lossf.backward(retain_graph=True)
+            vals = model.ode_rnn.h_rnn
+            for i in range(len(vals)):
+                grad = vals[i].grad
+                rec['grad_{}'.format(i)] = 0 if grad is None else torch.norm(grad)
+            model.zero_grad()
+
+        model.cell.nfe = 0
         loss.backward()
-        rec['batch_nfe'] = model.cell.nfe
+        rec['backward_nfe'] = model.cell.nfe
         nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         optimizer.step()
     rec['train_time'] = time.time() - train_start_time

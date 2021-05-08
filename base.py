@@ -254,6 +254,8 @@ class ODE_RNN(nn.Module):
 
         if self.ic:
             h_ode[0] = h_rnn[0] = self.ic(rearrange(x, 't b c -> b (t c)')).view((n_b, *self.nhid))
+        else:
+            h_ode[0] = h_rnn[0] = torch.zeros(n_b, *self.nhid, device=x.device)
         if self.rnn_out:
             for i in range(n_t):
                 self.ode.update(t[i])

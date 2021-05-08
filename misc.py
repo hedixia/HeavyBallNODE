@@ -100,7 +100,8 @@ class Recorder:
         self.current = dict()
         if verbose:
             for i in self.store[-1]:
-                print('{}: {}'.format(i, self.store[-1][i]))
+                if i[0] != '_':
+                    print('{}: {}'.format(i, self.store[-1][i]))
         return self.store[-1]
 
     def tolist(self):

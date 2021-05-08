@@ -59,6 +59,7 @@ def trainpv(model, fname, mname, niter=500, lr_dict=None, gradrec=None, pre_shri
 
 
             # Backward pass
+            model.cell.nfe = 0
             total_loss.backward()
             recorder['model_gradient_2norm']= gradnorm(model)
             recorder['cell_gradient_2norm'] = gradnorm(model.cell)
@@ -66,7 +67,7 @@ def trainpv(model, fname, mname, niter=500, lr_dict=None, gradrec=None, pre_shri
             nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
             recorder['mean_batch_time'] = time.time() - batch_start_time
-            recorder['mean_batch_nfe'] = model.cell.nfe
+            recorder['backward_nfe'] = model.cell.nfe
 
         # Validation
         if epoch == 0 or (epoch + 1) % 1 == 0:
