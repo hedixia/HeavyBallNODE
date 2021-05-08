@@ -46,7 +46,7 @@ def trainpv(model, fname, mname, niter=500, lr_dict=None, gradrec=None, pre_shri
             total_loss = loss * 0.1 + lossf
             recorder['forward_time'] = time.time() - batch_start_time
             recorder['forward_nfe'] = model.cell.nfe
-            recorder['train_loss'] = loss
+            # recorder['train_loss'] = loss
             recorder['train_forecast_loss'] = lossf
 
             # Gradient backprop computation
@@ -57,13 +57,12 @@ def trainpv(model, fname, mname, niter=500, lr_dict=None, gradrec=None, pre_shri
                     recorder['grad_{}'.format(i)] = torch.norm(vals[i].grad)
                 model.zero_grad()
 
-
             # Backward pass
             model.cell.nfe = 0
             total_loss.backward()
-            recorder['model_gradient_2norm']= gradnorm(model)
-            recorder['cell_gradient_2norm'] = gradnorm(model.cell)
-            #recorder['ic_gradient_2norm'] = gradnorm(model.ic)
+            # recorder['model_gradient_2norm']= gradnorm(model)
+            # recorder['cell_gradient_2norm'] = gradnorm(model.cell)
+            # recorder['ic_gradient_2norm'] = gradnorm(model.ic)
             nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
             recorder['mean_batch_time'] = time.time() - batch_start_time
@@ -78,7 +77,7 @@ def trainpv(model, fname, mname, niter=500, lr_dict=None, gradrec=None, pre_shri
             vloss = vloss + criteria(init, data.valid_x)
             vloss = vloss.detach().cpu().numpy()
             vfloss = fcriteria(forecast, data.vaext).detach().cpu().numpy()
-            recorder['validation_loss'] = vloss
+            # recorder['validation_loss'] = vloss
             recorder['validation_foreast_loss'] = vfloss
             recorder['validation_nfe'] = model.cell.nfe
             recorder['validation_time'] = time.time() - validation_start_time
@@ -92,7 +91,7 @@ def trainpv(model, fname, mname, niter=500, lr_dict=None, gradrec=None, pre_shri
             sloss = sloss + criteria(init, data.test_x)
             sloss = sloss.detach().cpu().numpy()
             sfloss = fcriteria(forecast, data.tsext).detach().cpu().numpy()
-            recorder['test_loss'] = sloss
+            # recorder['test_loss'] = sloss
             recorder['test_forecast_loss'] = sfloss
             recorder['test_nfe'] = model.cell.nfe
             recorder['test_time'] = time.time() - test_start_time
