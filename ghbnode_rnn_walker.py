@@ -65,7 +65,7 @@ res = True
 cont = True
 torch.manual_seed(0)
 model = MODEL(res=res, cont=cont).to(0)
-modelname = 'HBNODE'
+modelname = 'GHBNODE'
 print(model.__str__())
 rec = Recorder()
 criteria = nn.MSELoss()
