@@ -55,11 +55,11 @@ class MODEL(nn.Module):
         self.outlayer = nn.Linear(nhid, 17)
 
     def forward(self, t, x):
-        out = self.ode_rnn(t, x, retain_grad=True)[0]
+        out = self.ode_rnn(t, x, retain_grad=False)[0]
         out = self.outlayer(out[:, :, 0])[1:]
         return out
 
-gradrec = True
+gradrec = None
 lr_dict = {0: 0.001, 50: 0.003}
 res = True
 cont = True
