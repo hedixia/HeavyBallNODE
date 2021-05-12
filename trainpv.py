@@ -99,5 +99,6 @@ def trainpv(model, fname, mname, niter=500, lr_dict=None, gradrec=None, pre_shri
         recorder.capture(verbose=True)
         print('Epoch {} complete.'.format(epoch))
 
-    recorder.writecsv(fname)
-    torch.save(model.state_dict(), mname)
+        if epoch % 20 == 0 or epoch == niter:
+            recorder.writecsv(fname)
+            torch.save(model.state_dict(), mname)
