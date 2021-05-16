@@ -1,5 +1,8 @@
-import odernn_pv
+import node_rnn_pv
 import hbnode_rnn_pv
+import sonode_rnn_pv
+import anode_rnn_pv
+import ghbnode_rnn_pv
 import hbnode_rnn_cont_pv
 from trainpv import *
 from base import *
@@ -16,15 +19,17 @@ spec_t = torch.ones(len(t), spec)
 spec_t[:, 0] = 0
 spec_t = (spec_t * t) / (spec - 1)
 spec_t = spec_t.flatten()
-elapsed_time = torch.cumsum(spec_t, dim=0).detach().numpy()
+elapsed_time = torch.cumsum(spec_t, dim=0).detach()
 forecast_time = elapsed_time[-1] + multiforecast
 
-data_time = torch.cumsum(t.flatten(), dim=0).detach().numpy()
-data_time = np.array([0, *data_time])
+data_time = torch.cumsum(t.flatten(), dim=0).detach()
+data_time = torch.Tensor([0, *data_time])
 data_forecast_time = data_time[-1] + torch.arange(forelen)
 truesol = [*x[:, 0, 0].numpy(), y[-1, 0, 0]]
 
-print(elapsed_time[-5:])
+
+fine_time = torch.cat([elapsed_time, forecast_time], dim=0)
+crude_time = torch.cat([data_time, data_forecast_time], dim=0)
 
 
 def makeout(model):
@@ -52,25 +57,32 @@ def makeout(model):
     predict = rearrange(odeout, 't ... -> t (...)')
     return predict[:, 0], forecast[:, 0]
 
+modules = [node_rnn_pv,anode_rnn_pv, sonode_rnn_pv,  hbnode_rnn_pv, ghbnode_rnn_pv]
+models = [m.MODEL() for m in modules]
+modelnames = ['node', 'anode', 'sonode', 'hbnode', 'ghbnode']
+colors = ['r', 'g', 'b', 'c', 'y']
+state_dicts = [torch.load('output/pv_{}_rnn.mdl'.format(name)) for name in modelnames]
+csvdat = torch.zeros(7, fine_time.shape[0])
+for i in range(5):
+    models[i].load_state_dict(state_dicts[i])
+    prediction, forecast = makeout(models[i])
+    seq = np.concatenate([prediction, forecast], axis=0)
+    plt.plot(fine_time, seq, colors[i], label=modelnames[i])
+    csvdat[i] = torch.Tensor(seq)
 
-ode_rnn_pre_model = odernn_pv.MODEL()
-ode_rnn_pre_model.load_state_dict(torch.load('output/pv_node_rnn.mdl'))
-hbnode_rnn_pre_model = hbnode_rnn_pv.MODEL()
-hbnode_rnn_pre_model.load_state_dict(torch.load('output/pv_hbnode_rnn.mdl'))
-hbnode_c_rnn_pre_model = hbnode_rnn_cont_pv.MODEL()
-hbnode_c_rnn_pre_model.load_state_dict(torch.load('output/pv_hbnode_rnn_cont.mdl'))
-
-odepre, odefore = makeout(ode_rnn_pre_model)
-hbnodepre, hbnodefore = makeout(hbnode_rnn_pre_model)
-hbcpre, hbcfore = makeout(hbnode_c_rnn_pre_model)
-
-plt.plot(elapsed_time, odepre, 'r')
-plt.plot(elapsed_time, hbnodepre, 'g')
-plt.plot(elapsed_time, hbcpre, 'c')
-plt.plot(data_time, truesol, 'b')
-plt.plot(forecast_time, odefore, 'r')
-plt.plot(forecast_time, hbnodefore, 'g')
-plt.plot(forecast_time, hbcfore, 'c')
-plt.plot(data_forecast_time, p, 'b')
-plt.legend(['ODE-RNN', 'HBNODE-RNN', 'HBNODE-RNN-cont', 'Observation'])
+truesol = np.array(truesol)
+p = p.flatten()
+print(truesol.shape, p.shape)
+truedat = np.concatenate([truesol, p], axis=0)
+from scipy.interpolate import interp1d
+f = interp1d(crude_time.numpy(), truedat)
+truefine = f(fine_time.numpy())
+plt.plot(fine_time, truefine, 'k', label='Truth')
+plt.legend()
 plt.show()
+
+csvdat[-2] = torch.Tensor(truefine)
+csvdat[-1] = torch.Tensor(fine_time)
+print(data_time[-1])
+print(csvdat)
+np.savetxt('results/plane_vibration/sample_plot.csv', csvdat.numpy(), delimiter=',')

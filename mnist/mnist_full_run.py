@@ -130,53 +130,53 @@ class tvSequential(nn.Sequential):
 trdat, tsdat = mnist()
 
 
-def model_gen(name):
+def model_gen(name, **kwargs):
     if name == 'node':
         dim = 1
         nhid = 92
-        layer = NODElayer(NODE(DF(dim, nhid)))
+        layer = NODElayer(NODE(DF(dim, nhid)), **kwargs)
         model = nn.Sequential(anode_initial_velocity(1, dim),
                               layer, predictionlayer(dim))
     elif name == 'anode':
         dim = 6
         nhid = 64
-        layer = NODElayer(NODE(DF(dim, nhid)))
+        layer = NODElayer(NODE(DF(dim, nhid)), **kwargs)
         model = nn.Sequential(anode_initial_velocity(1, dim),
                               layer, predictionlayer(dim))
     elif name == 'sonode-':
         dim = 1
         nhid = 65
-        hblayer = NODElayer(SONODE(DF(2 * dim, nhid, dim)))
+        hblayer = NODElayer(SONODE(DF(2 * dim, nhid, dim)), **kwargs)
         model = nn.Sequential(hbnode_initial_velocity(1, dim, nhid),
                               hblayer, predictionlayer(dim, truncate=True)).to(device=args.gpu)
     elif name == 'sonode':
         dim = 5
         nhid = 50
-        hblayer = NODElayer(SONODE(DF(2 * dim, nhid, dim)))
+        hblayer = NODElayer(SONODE(DF(2 * dim, nhid, dim)), **kwargs)
         model = nn.Sequential(hbnode_initial_velocity(1, dim, nhid),
                               hblayer, predictionlayer(dim, truncate=True)).to(device=args.gpu)
     elif name == 'hbnode':
         dim = 5
         nhid = 50
-        layer = NODElayer(HeavyBallNODE(DF(dim, nhid), None))
+        layer = NODElayer(HeavyBallNODE(DF(dim, nhid), None), **kwargs)
         model = nn.Sequential(hbnode_initial_velocity(1, dim, nhid),
                               layer, predictionlayer(dim, truncate=True)).to(device=args.gpu)
     elif name == 'ghbnode':
         dim = 6
         nhid = 45
-        layer = NODElayer(HeavyBallNODE(DF(dim, nhid), actv_h=nn.Tanh(), corr=2.0, corrf=False))
+        layer = NODElayer(HeavyBallNODE(DF(dim, nhid), actv_h=nn.Tanh(), corr=2.0, corrf=False), **kwargs)
         model = nn.Sequential(hbnode_initial_velocity(1, dim, nhid),
                               layer, predictionlayer(dim, truncate=True)).to(device=args.gpu)
     elif name == 'avnode':
         dim = 6
         nhid = 64
-        layer = NODElayer(NODE(DF(dim, nhid)), shape=(1, 6, 28, 28), recf=tv4node())
+        layer = NODElayer(NODE(DF(dim, nhid)), shape=(1, 6, 28, 28), recf=tv4node(), **kwargs)
         model = tvSequential(anode_initial_velocity(1, dim),
                              layer, predictionlayer(dim))
     elif name == 'areg':
         dim = 6
         nhid = 64
-        layer = NODElayer(NODE(DF(dim, nhid)))
+        layer = NODElayer(NODE(DF(dim, nhid)), **kwargs)
         model = nn.Sequential(anode_initial_velocity(1, dim),
                               layer, predictionlayer(dim))
     else:
@@ -199,13 +199,13 @@ for name in names:
     runnum = name[:3]
     log = open('../output/mnist/log_{}.txt'.format(runnum), 'w')
     datfile = open('../output/mnist/mnist_dat_{}.txt'.format(runnum), 'wb')
-    for i in range(3):
-        model = model_gen(name)
+    for i in range(1):
+        model = model_gen(name, tol=1e-4)
         print(name, count_parameters(model), *[count_parameters(i) for i in model])
         optimizer = optim.Adam(model.parameters(), lr=args.lr / 2, weight_decay=0.000)
         lrscheduler = torch.optim.lr_scheduler.StepLR(optimizer, 200, 0.9)
         # train_out = train(model, optimizer, trdat, tsdat, args, evalfreq=1)
-        train_out = train(model, optimizer, trdat, tsdat, args, name, i, evalfreq=1, csvname='../imgdat/outdat0.csv')
+        train_out = train(model, optimizer, trdat, tsdat, args, name, i, evalfreq=1, csvname='../imgdat/outdat1.csv')
         dat.append([name, i, train_out])
         log.writelines(['\n'] * 5)
     pickle.dump(dat, datfile)

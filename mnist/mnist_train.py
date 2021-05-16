@@ -70,7 +70,7 @@ def train(model, optimizer, trdat, tsdat, args, modelname, testnumber=0, evalfre
         writer.writerow(printouts)
         csvfile.close()
         print(str_rec(rec_names, printouts, rec_unit))
-        if time_arr[epoch - 1] > 1000:
+        if time_arr[epoch - 1] > 2400:
             break
         if epoch % evalfreq == 0:
             model[1].df.nfe = 0

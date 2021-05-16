@@ -4,14 +4,15 @@ import csv
 rec_names = ["model", "test#", "train/test", "iter", "loss", "acc", "forwardnfe", "backwardnfe", "time/iter",
              "time_elapsed"]
 
-root = "results/cifar/general"
-outfile = open('imgdat/cifar.csv', 'w')
+root = "results/cifar/tol"
+outfile = open('imgdat/cifar_5.csv', 'w')
 csvwriter = csv.writer(outfile)
 csvwriter.writerow(rec_names)
 
 for model in os.listdir(root):
     fnames = os.listdir(os.path.join(root, model))
-    fnames = sorted(fnames, key=lambda x: int(x[-5]))
+    fnames = [i for i in fnames if '5' in i]
+    #fnames = sorted(fnames, key=lambda x: int(x[-5]))
     for fname in fnames:
         testnum = fname[-5]
         with open(os.path.join(root, model, fname), 'r') as infile:

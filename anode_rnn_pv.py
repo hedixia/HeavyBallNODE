@@ -76,4 +76,5 @@ class MODEL(nn.Module):
 
 if __name__ == '__main__':
     model = MODEL()
-    trainpv(model, 'output/pv/log_an0_{}.csv'.format(count_parameters(model)), 'output/pv_anode_rnn.mdl')
+    model.load_state_dict(torch.load('output/pv_anode_rnn.mdl'))
+    trainpv(model, 'output/pv/log_an0_{}.csv'.format(count_parameters(model)), 'output/pv_anode_rnn.mdl', niter=40, pre_shrink=1)
