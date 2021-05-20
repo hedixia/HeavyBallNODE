@@ -48,7 +48,7 @@ class MODEL(nn.Module):
     def __init__(self, res=False, cont=False):
         super(MODEL, self).__init__()
         nhid = 24
-        self.cell = HeavyBallNODE(tempf(nhid, nhid), corr=1, corrf=False)
+        self.cell = HeavyBallNODE(tempf(nhid, nhid), corr=0, corrf=True)
         # self.cell = HeavyBallNODE(tempf(nhid, nhid))
         self.rnn = temprnn(17, nhid, nhid, res=res, cont=cont)
         self.ode_rnn = ODE_RNN_with_Grad_Listener(self.cell, self.rnn, (2, nhid), None, tol=1e-7)
@@ -59,7 +59,7 @@ class MODEL(nn.Module):
         out = self.outlayer(out[:, :, 0])[1:]
         return out
 
-gradrec = True
+gradrec = None
 lr_dict = {0: 0.001, 50: 0.003}
 res = True
 cont = True

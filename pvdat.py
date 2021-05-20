@@ -37,7 +37,7 @@ def pv(path='./data/pv.csv', input_len=64, tvt_ratio=(2, 1, 1), throwout_rate=0.
     tslen = eff_len - valen - trlen
     trlab, valab, tslab = label_set[:trlen], label_set[trlen:-tslen], label_set[-tslen:]
 
-    output = MyClass()
+    output = EmptyClass()
     output.train_x, output.train_y, output.train_times, output.trext = lab_to_dat(trlab, data, input_len, forecast_len)
     output.valid_x, output.valid_y, output.valid_times, output.vaext = lab_to_dat(valab, data, input_len, forecast_len)
     output.test_x, output.test_y, output.test_times, output.tsext = lab_to_dat(tslab, data, input_len, forecast_len)

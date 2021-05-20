@@ -75,7 +75,7 @@ def to_float(arr, truncate=False):
     return arr
 
 
-class MyClass:
+class EmptyClass:
     pass
 
 
@@ -124,3 +124,23 @@ class Recorder:
             csvwriter = writer
             csvwriter.writerow(labels)
             csvwriter.writerows(outlist)
+
+
+class NLayerNN(nn.Module):
+    def __init__(self, *args, actv=nn.ReLU()):
+        super().__init__()
+        self.linears = nn.ModuleList()
+        for i in range(len(args)):
+            self.linears.append(nn.Linear(args[i], args[i+1]))
+        self.actv = actv
+
+    def forward(self, x):
+        for i in range(self.layer_cnt):
+            x = self.linears[i](x)
+            if i < self.layer_cnt - 1:
+                x = self.actv(x)
+        return x
+
+    @property
+    def layer_cnt(self):
+        return len(self.linears)

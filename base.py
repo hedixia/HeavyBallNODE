@@ -6,6 +6,11 @@ from torchdiffeq import odeint_adjoint
 from basehelper import *
 
 
+class Tinvariant_NLayerNN(NLayerNN):
+    def forward(self, t, x):
+        return super(Tinvariant_NLayerNN, self).forward(x)
+
+
 class dfwrapper(nn.Module):
     def __init__(self, df, shape, recf=None):
         super(dfwrapper, self).__init__()
@@ -287,12 +292,11 @@ class ODE_RNN_with_Grad_Listener(nn.Module):
         if retain_grad:
             self.h_ode = h_ode
             self.h_rnn = h_rnn
-            for i in range(n_t+1):
+            for i in range(n_t + 1):
                 if self.h_ode[i].requires_grad:
                     self.h_ode[i].retain_grad()
                 if self.h_rnn[i].requires_grad:
                     self.h_rnn[i].retain_grad()
-
 
         return out
 
@@ -374,4 +378,3 @@ class ODE_RNN(nn.Module):
             out = (*out, forecast)
 
         return out
-
