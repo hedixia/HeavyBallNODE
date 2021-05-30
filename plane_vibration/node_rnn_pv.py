@@ -1,13 +1,13 @@
-from trainpv import *
+from plane_vibration.trainpv import *
 
 
 class tempf(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
         self.actv = nn.ReLU()
-        self.dense1 = nn.Linear(in_channels, 3*in_channels)
-        self.dense2 = nn.Linear(3*in_channels, 4*out_channels)
-        self.dense3 = nn.Linear(4*out_channels, out_channels)
+        self.dense1 = nn.Linear(in_channels, 3 * in_channels)
+        self.dense2 = nn.Linear(3 * in_channels, 4 * out_channels)
+        self.dense3 = nn.Linear(4 * out_channels, out_channels)
 
     def forward(self, h, x):
         out = self.dense1(x)
@@ -38,29 +38,15 @@ class temprnn(nn.Module):
         return out
 
 
-class IC (nn.Module):
-    def __init__(self, idim, nhid):
-        super(IC, self).__init__()
-        self.idim = idim
-        self.nhid = nhid
-        self.dense = nn.Linear(idim, 5)
-        self.aug = nhid - 5
-
-    def forward(self, x):
-        y = self.dense(x)
-        zeroshape = list(y.shape)
-        zeroshape[-1] = self.aug
-        zeros = torch.zeros(zeroshape, device=x.device)
-        return torch.cat([y, zeros], dim=-1)
-
 class MODEL(nn.Module):
     def __init__(self, res=False, cont=False):
         super(MODEL, self).__init__()
-        nhid = 27
+        nhid = 21
         self.cell = NODE(tempf(nhid, nhid))
         self.rnn = temprnn(5, nhid, nhid, res=res, cont=cont)
-        self.ic = IC(5 * seqlen, nhid)
-        self.ode_rnn = ODE_RNN_with_Grad_Listener(self.cell, self.rnn, nhid, self.ic, rnn_out=False, both=True, tol=1e-7)
+        self.ic = nn.Linear(5 * seqlen, nhid)
+        self.ode_rnn = ODE_RNN_with_Grad_Listener(self.cell, self.rnn, nhid, self.ic, rnn_out=False, both=True,
+                                                  tol=1e-7)
         self.outlayer = nn.Linear(nhid, 5)
 
     def forward(self, t, x, multiforecast=None):
@@ -73,8 +59,6 @@ class MODEL(nn.Module):
         return out
 
 
-
-if __name__ == '__main__':
+def main():
     model = MODEL()
-    model.load_state_dict(torch.load('output/pv_anode_rnn.mdl'))
-    trainpv(model, 'output/pv/log_an0_{}.csv'.format(count_parameters(model)), 'output/pv_anode_rnn.mdl', niter=40, pre_shrink=1)
+    trainpv(model, 'output/pv/log_n0_{}.csv'.format(count_parameters(model)), 'output/pv_node_rnn.mdl')

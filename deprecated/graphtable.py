@@ -1,8 +1,7 @@
 import os
-import re
 
 from misc import *
-from output_parser import OutputParser
+from deprecated.output_parser import OutputParser
 
 output_data_folder = './hbnode_data'
 datdir = 'mnist_84k'

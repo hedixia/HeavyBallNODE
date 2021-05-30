@@ -12,7 +12,7 @@ parser.add_argument('--npoints', type=int, default=1000)
 parser.add_argument('--experiment_no', type=int, default=1)
 args = parser.parse_args()
 
-v1_data, v2_data = load_data('./data/sb.csv', skiprows=1, usecols=(0, 1), rescaling=100)
+v1_data, v2_data = load_data('../data/sb.csv', skiprows=1, usecols=(0, 1), rescaling=100)
 time_rescale = 1.0
 input_t = 25
 forecast_t = 10

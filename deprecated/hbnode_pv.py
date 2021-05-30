@@ -1,4 +1,4 @@
-from trainpv import *
+from deprecated.plane_vibration import *
 
 
 class tempf(nn.Module):

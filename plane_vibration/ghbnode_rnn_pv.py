@@ -1,4 +1,4 @@
-from trainpv import *
+from plane_vibration.trainpv import *
 
 
 class tempf(nn.Module):
@@ -22,9 +22,9 @@ class temprnn(nn.Module):
     def __init__(self, in_channels, out_channels, nhidden, res=False, cont=False):
         super().__init__()
         self.actv = nn.ReLU()
-        self.dense1 = nn.Linear(in_channels,  out_channels)
-        self.dense2 = nn.Linear(nhidden,  out_channels)
-        self.dense2q = nn.Linear(nhidden, out_channels)
+        self.dense1 = nn.Linear(in_channels, 2 * out_channels)
+        self.dense2 = nn.Linear(nhidden, 2 * out_channels)
+        self.dense2q = nn.Linear(nhidden, 2 * out_channels)
         # self.dense2y = nn.Linear(nhidden, nhidden)
         # self.dense3 = nn.Linear(nhidden, 2*out_channels)
         self.cont = cont
@@ -38,20 +38,20 @@ class temprnn(nn.Module):
         m_ = m_ + y.view(m_.shape)  # self.dense2y(y.view(p.shape))
         # m_ = self.actv(m_)
         # m_ = self.dense3(m_)
-        out = m_.view(q.shape) + q
-        out = torch.cat([p, out], dim=1)
+        out = m_.view(h.shape) + h
         return out
 
 
 class MODEL(nn.Module):
     def __init__(self, res=False, cont=False):
         super(MODEL, self).__init__()
-        nhid = 21
-        self.cell = HeavyBallNODE(tempf(nhid, nhid), corr=0, corrf=False)
+        nhid = 20
+        self.cell = HeavyBallNODE(tempf(nhid, nhid), corr=0, corrf=False, actv_h=nn.Tanh())
         # self.cell = HeavyBallNODE(tempf(nhid, nhid))
         self.ic = nn.Linear(5 * seqlen, 2 * nhid)
         self.rnn = temprnn(5, nhid, nhid, res=res, cont=cont)
-        self.ode_rnn = ODE_RNN_with_Grad_Listener(self.cell, self.rnn, (2, nhid), self.ic, rnn_out=False, both=True, tol=1e-7)
+        self.ode_rnn = ODE_RNN_with_Grad_Listener(self.cell, self.rnn, (2, nhid), self.ic, rnn_out=False, both=True,
+                                                  tol=1e-7)
         self.outlayer = nn.Linear(nhid, 5)
 
     def forward(self, t, x, multiforecast=None):
@@ -65,7 +65,6 @@ class MODEL(nn.Module):
         return out
 
 
-
-if __name__ == '__main__':
+def main():
     model = MODEL()
-    trainpv(model, 'output/pv/log_hbc0_{}.csv'.format(count_parameters(model)), 'output/pv_hbnode_rnn.mdl')
+    trainpv(model, 'output/pv/log_ghb0_{}.csv'.format(count_parameters(model)), 'output/pv_ghbnode_rnn.mdl')

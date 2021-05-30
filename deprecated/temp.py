@@ -5,7 +5,7 @@ rec_names = ["model", "test#", "train/test", "iter", "loss", "acc", "forwardnfe"
              "time_elapsed"]
 
 root = "results/cifar/tol"
-outfile = open('imgdat/cifar_5.csv', 'w')
+outfile = open('../imgdat/cifar_5.csv', 'w')
 csvwriter = csv.writer(outfile)
 csvwriter.writerow(rec_names)
 

@@ -30,3 +30,13 @@ In training phase, call model with parameters:
 - x0stats = if initial condition is a nn.Module, then provide its input. Otherwise, set it to None (default).
 
 In evaluating phase, if there is a initial condition given, then input initial_condition. Otherwise, set it to None.
+
+
+Experiments:
+
+- Silverbox initialization test in fig.3: silverbox_init.py
+- Point cloud separation in sec 5.1: 
+- MNIST in sec 5.2: mnist/mnist_full_run.py
+- CIFAR in sec 5.2: HeavyBall_CIFAR.ipynb
+- Plane Vibration in sec 5.3: plane_vibration
+- Walker2D in sec 5.4: walker2d

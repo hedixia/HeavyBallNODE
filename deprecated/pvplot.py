@@ -1,10 +1,4 @@
-import node_rnn_pv
-import hbnode_rnn_pv
-import sonode_rnn_pv
-import anode_rnn_pv
-import ghbnode_rnn_pv
-import hbnode_rnn_cont_pv
-from trainpv import *
+from deprecated.plane_vibration import anode_rnn_pv, sonode_rnn_pv, hbnode_rnn_pv, node_rnn_pv, ghbnode_rnn_pv
 from base import *
 
 spec = 10
@@ -57,7 +51,7 @@ def makeout(model):
     predict = rearrange(odeout, 't ... -> t (...)')
     return predict[:, 0], forecast[:, 0]
 
-modules = [node_rnn_pv,anode_rnn_pv, sonode_rnn_pv,  hbnode_rnn_pv, ghbnode_rnn_pv]
+modules = [node_rnn_pv, anode_rnn_pv, sonode_rnn_pv, hbnode_rnn_pv, ghbnode_rnn_pv]
 models = [m.MODEL() for m in modules]
 modelnames = ['node', 'anode', 'sonode', 'hbnode', 'ghbnode']
 colors = ['r', 'g', 'b', 'c', 'y']

@@ -1,4 +1,4 @@
-from trainpv import *
+from plane_vibration.trainpv import *
 
 
 class tempf(nn.Module):
@@ -50,7 +50,8 @@ class MODEL(nn.Module):
         # self.cell = HeavyBallNODE(tempf(nhid, nhid))
         self.ic = nn.Linear(5 * seqlen, 2 * nhid)
         self.rnn = temprnn(5, nhid, nhid, res=res, cont=cont)
-        self.ode_rnn = ODE_RNN_with_Grad_Listener(self.cell, self.rnn, (2, nhid), self.ic, rnn_out=False, both=True, tol=1e-7)
+        self.ode_rnn = ODE_RNN_with_Grad_Listener(self.cell, self.rnn, (2, nhid), self.ic, rnn_out=False, both=True,
+                                                  tol=1e-7)
         self.outlayer = nn.Linear(nhid, 5)
 
     def forward(self, t, x, multiforecast=None):
@@ -64,7 +65,6 @@ class MODEL(nn.Module):
         return out
 
 
-
-if __name__ == '__main__':
+def main():
     model = MODEL()
     trainpv(model, 'output/pv/log_hb0_{}.csv'.format(count_parameters(model)), 'output/pv_hbnode_rnn.mdl')

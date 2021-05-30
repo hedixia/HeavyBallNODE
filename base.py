@@ -49,7 +49,7 @@ class NODEintegrate(nn.Module):
         self.df = dfwrapper(df, shape, recf) if shape else df
         self.tol = tol
         self.odeint = torchdiffeq.odeint_adjoint if adjoint else torchdiffeq.odeint
-        self.evaluation_times = evaluation_times if evaluation_times else torch.Tensor([0.0, 1.0])
+        self.evaluation_times = evaluation_times if evaluation_times is not None else torch.Tensor([0.0, 1.0])
         self.shape = shape
         self.recf = recf
         if recf:
@@ -159,13 +159,13 @@ class SONODE(NODE):
 
 
 class HeavyBallNODE(NODE):
-    def __init__(self, df, actv_h=None, gamma_guess=-3.0, gamma_act='sigmoid', corr=0, corrf=True):
+    def __init__(self, df, actv_h=None, gamma_guess=-3.0, gamma_act='sigmoid', corr=-100, corrf=True):
         super().__init__(df)
         # Momentum parameter gamma
         self.gamma = Parameter([gamma_guess], frozen=False)
         self.gammaact = nn.Sigmoid() if gamma_act == 'sigmoid' else gamma_act
         self.corr = Parameter([corr], frozen=corrf)
-
+        self.sp = nn.Softplus()
         # Activation for dh, GHBNODE only
         self.actv_h = nn.Identity() if actv_h is None else actv_h
 
@@ -186,7 +186,7 @@ class HeavyBallNODE(NODE):
         h, m = torch.split(x, 1, dim=1)
         dh = self.actv_h(- m)
         dm = self.df(t, h) - self.gammaact(self.gamma()) * m
-        dm = dm + self.corr() * h
+        dm = dm + self.sp(self.corr()) * h
         out = torch.cat((dh, dm), dim=1)
         if self.elem_t is None:
             return out
