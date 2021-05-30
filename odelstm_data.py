@@ -1,7 +1,8 @@
 import numpy as np
 import os
-from einops import  rearrange
+from einops import rearrange
 import torch
+
 
 class Walker2dImitationData:
     def __init__(self, seq_len, device='cpu'):
@@ -43,9 +44,9 @@ class Walker2dImitationData:
         )
         self.input_size = self.train_x.shape[-1]
 
-        print("train_times: ", str(self.train_times.shape))
-        print("train_x: ", str(self.train_x.shape))
-        print("train_y: ", str(self.train_y.shape))
+        # print("train_times: ", str(self.train_times.shape))
+        # print("train_x: ", str(self.train_x.shape))
+        # print("train_y: ", str(self.train_y.shape))
 
     def align_sequences(self, set_x, set_t, set_y):
 
@@ -112,6 +113,5 @@ class Walker2dImitationData:
             all_t.append(x_times)
             all_y.append(y)
 
-            print("Loaded file '{}' of length {:d}".format(f, x_state.shape[0]))
+            # print("Loaded file '{}' of length {:d}".format(f, x_state.shape[0]))
         return all_x, all_t, all_y
-

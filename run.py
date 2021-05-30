@@ -1,5 +1,6 @@
 from plane_vibration import *
 from walker2d import *
+import sys
 
 run_pv = {
     'node': node_rnn_pv.main,
@@ -19,12 +20,16 @@ run_walker = {
 
 all_models = {
     'pv': run_pv,
-    'walker':run_walker,
+    'walker': run_walker,
 }
 
 
-def main(ds, model):
+def main(ds='pv', model='hbnode'):
     all_models[ds][model]()
 
 
-main('walker', 'anode')
+if __name__ == '__main__':
+    args = sys.argv[1:]
+    assert len(args) == 2, "Input format: python3 run.py task model"
+    print("Working on dataset {} using {} model".format(*args))
+    main(*args)

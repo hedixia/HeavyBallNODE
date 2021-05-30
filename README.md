@@ -1,4 +1,9 @@
-# HeavyBallNODE
+# Heavy Ball Neural Ordinary Differential Equations
+
+This is the official implementation of Heavy Ball Neural Ordinary Differential Equations. 
+It is based on Pytorch and torchdiffeq, and all numerical solvers used are dopri5.
+
+## Usage
 
 Data format shape: 
 [timestamps, batch, channels (derivatives), feature dimension]
@@ -7,36 +12,37 @@ Usage:
 
 First create a NODE type module by 
 
-node = NODE(...)
+cell = NODE(...)
+
+Or a HBNODE by 
+
+cell = HBNODE(...)
 
 And turn it into a time series model by 
 
-model = NODEintegrate(node, initial_condition)
+model = NODEintegrate(cell)
 
-Comparably there is a residual network type model by
+It can also be used as a residual network analogy by
 
-model = NODElayer(node)
+model = NODElayer(cell)
 
-Initial condition input are
+For NODE-RNN type hybrids, use 
 
-1. constant input
-2. nn.Parameter
-3. nn.Module
+model = ODE_RNN(ode, cell, nhid, ic)
 
-In training phase, call model with parameters:
-
-- initial_condition = None
-- evaluation_times = evaluation_times, including the first one as starting time.
-- x0stats = if initial condition is a nn.Module, then provide its input. Otherwise, set it to None (default).
-
-In evaluating phase, if there is a initial condition given, then input initial_condition. Otherwise, set it to None.
+here nhid is the hidden shape (same shape as ode / cell input and output). ic is the initial conditions.
 
 
-Experiments:
+## Experiments
 
-- Silverbox initialization test in fig.3: silverbox_init.py
-- Point cloud separation in sec 5.1: 
-- MNIST in sec 5.2: mnist/mnist_full_run.py
+As Jupyter Notebooks:
+
+- Point cloud separation in sec 5.1: point_cloud/nested_n_spheres_hbnode.ipynb
 - CIFAR in sec 5.2: HeavyBall_CIFAR.ipynb
-- Plane Vibration in sec 5.3: plane_vibration
-- Walker2D in sec 5.4: walker2d
+
+As Python files
+
+- Silverbox initialization test in fig.3: python3 silverbox_init.py
+- MNIST in sec 5.2: python3 mnist/mnist_full_run.py
+- Plane Vibration in sec 5.3: python3 run.py pv hbnode
+- Walker2D in sec 5.4: python3 run.py walker hbnode

@@ -63,6 +63,7 @@ class MODEL(nn.Module):
 
 
 def main():
+    data = Walker2dImitationData(seq_len=seqlen, device=0)
     gradrec = True
     lr_dict = {0: 0.003}
     torch.manual_seed(0)

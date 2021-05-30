@@ -200,42 +200,52 @@ class HeavyBallNODE(NODE):
 HBNODE = HeavyBallNODE
 
 
-class NormedHeavyBall(HeavyBallNODE):
-    def __init__(self, df, normbound=100, normf=False, actv_h=None, gamma_guess=-3.0,
-                 gamma_act='sigmoid', corr=0):
-        super().__init__(df, actv_h=actv_h, gamma_guess=gamma_guess, gamma_act=gamma_act,
-                         corr=corr)
-        assert normbound >= 1
-        self.normf = normf if normf else TVnorm()
-        self.normact = NormAct(normbound)
+class ODE_RNN(nn.Module):
+    def __init__(self, ode, rnn, nhid, ic, rnn_out=False, both=False, tol=1e-7):
+        super().__init__()
+        self.ode = ode
+        self.t = torch.Tensor([0, 1])
+        self.nhid = [nhid] if isinstance(nhid, int) else nhid
+        self.rnn = rnn
+        self.tol = tol
+        self.rnn_out = rnn_out
+        self.ic = ic
+        self.both = both
 
-    def forward(self, t, x):
-        self.nfe += 1
-        theta, m, norm = torch.split(x, 1, dim=1)
-        dnorm = self.normf(theta, m).view(norm.shape)
-        dtheta = self.actv_h(self.thetalin(theta) - m)  # * self.normact(norm)
-        dm = self.df(t, theta) - torch.sigmoid(self.gamma) * m
-        dm += self.gamma_corr * theta
-        return torch.cat((dtheta, dm, dnorm), dim=1)
+    def forward(self, t, x, multiforecast=None):
+        """
+        --
+        :param t: [time, batch]
+        :param x: [time, batch, ...]
+        :return: [time, batch, *nhid]
+        """
+        n_t, n_b = t.shape
+        h_ode = torch.zeros(n_t + 1, n_b, *self.nhid, device=x.device)
+        h_rnn = torch.zeros(n_t + 1, n_b, *self.nhid, device=x.device)
+        if self.ic:
+            h_ode[0] = h_rnn[0] = self.ic(rearrange(x, 't b c -> b (t c)')).view(h_ode[0].shape)
+        if self.rnn_out:
+            for i in range(n_t):
+                self.ode.update(t[i])
+                h_ode[i] = odeint(self.ode, h_rnn[i], self.t, atol=self.tol, rtol=self.tol)[-1]
+                h_rnn[i + 1] = self.rnn(h_ode[i], x[i])
+            out = (h_rnn,)
+        else:
+            for i in range(n_t):
+                self.ode.update(t[i])
+                h_rnn[i] = self.rnn(h_ode[i], x[i])
+                h_ode[i + 1] = odeint(self.ode, h_rnn[i], self.t, atol=self.tol, rtol=self.tol)[-1]
+            out = (h_ode,)
 
+        if self.both:
+            out = (h_rnn, h_ode)
 
-"""
-class HBNODERNN(ODERNN):
-    def __init__(self, df, rnn, evaluation_times, nhidden, *args, **kwargs):
-        super(HBNODERNN, self).__init__(df, rnn, evaluation_times, nhidden)
-        self.node = HeavyBallNODE(df, *args, **kwargs)
+        if multiforecast is not None:
+            self.ode.update(torch.ones_like((t[0])))
+            forecast = odeint(self.ode, out[-1][-1], multiforecast * 1.0, atol=self.tol, rtol=self.tol)
+            out = (*out, forecast)
 
-    def forward(self, x):
-        assert len(x) == self.n_t
-        batchsize = x.shape[1]
-        out = torch.zeros([self.n_t, batchsize, 2, *self.nhidden]).to(x.device)
-        for i in range(1, self.n_t):
-            odesol = odeint(self.node, out[i - 1], self.t[i - 1:i + 1])
-            h_ode, m_ode = odesol[1].split(1, dim=1)
-            m_rnn = self.rnn(m_ode, x[i])
-            out[i] = torch.cat([h_ode, m_rnn], dim=1)
         return out
-"""
 
 
 class ODE_RNN_with_Grad_Listener(nn.Module):
@@ -297,84 +307,5 @@ class ODE_RNN_with_Grad_Listener(nn.Module):
                     self.h_ode[i].retain_grad()
                 if self.h_rnn[i].requires_grad:
                     self.h_rnn[i].retain_grad()
-
-        return out
-
-
-class ODE_LSTM(ODE_RNN_with_Grad_Listener):
-    def __init__(self, ode, lstm_lin, nhid, tol=1e-7):
-        super(ODE_LSTM, self).__init__(ode, lstm_lin, nhid, tol=tol)
-        self.sigmoid = nn.Sigmoid()
-        self.tanh = nn.Tanh()
-
-    def forward(self, t, x):
-        """
-        --
-        :param t: [time, batch]
-        :param x: [time, batch, ...]
-        :return: [time, batch, *nhid]
-        """
-        n_t, n_b = t.shape
-        h_ode = torch.zeros(n_t + 1, n_b, *self.nhid, device=x.device)
-        c_lstm = torch.zeros(n_b, *self.nhid, device=x.device)
-        for i in range(n_t):
-            self.ode.update(t[i])
-            V_lstm = self.rnn(h_ode[i], x[i])
-            z_lstm, i_lstm, f_lstm, o_lstm = torch.split(V_lstm, V_lstm.shape[-1] // 4, dim=-1)
-            z_lstm = self.tanh(z_lstm)
-            i_lstm = self.sigmoid(i_lstm)
-            f_lstm = self.sigmoid(f_lstm + 1)
-            o_lstm = self.sigmoid(o_lstm)
-            c_lstm = z_lstm * i_lstm + c_lstm * f_lstm
-            h_lstm = self.tanh(c_lstm) * o_lstm
-            h_odein = torch.cat([h_ode[i, :, :1], h_lstm[:, 1:]], dim=1)
-            h_ode[i + 1] = odeint(self.ode, h_odein, self.t, atol=self.tol, rtol=self.tol)[1]
-        return h_ode
-
-
-class ODE_RNN(nn.Module):
-    def __init__(self, ode, rnn, nhid, ic, rnn_out=False, both=False, tol=1e-7):
-        super().__init__()
-        self.ode = ode
-        self.t = torch.Tensor([0, 1])
-        self.nhid = [nhid] if isinstance(nhid, int) else nhid
-        self.rnn = rnn
-        self.tol = tol
-        self.rnn_out = rnn_out
-        self.ic = ic
-        self.both = both
-
-    def forward(self, t, x, multiforecast=None):
-        """
-        --
-        :param t: [time, batch]
-        :param x: [time, batch, ...]
-        :return: [time, batch, *nhid]
-        """
-        n_t, n_b = t.shape
-        h_ode = torch.zeros(n_t + 1, n_b, *self.nhid, device=x.device)
-        h_rnn = torch.zeros(n_t + 1, n_b, *self.nhid, device=x.device)
-        if self.ic:
-            h_ode[0] = h_rnn[0] = self.ic(rearrange(x, 't b c -> b (t c)')).view(h_ode[0].shape)
-        if self.rnn_out:
-            for i in range(n_t):
-                self.ode.update(t[i])
-                h_ode[i] = odeint(self.ode, h_rnn[i], self.t, atol=self.tol, rtol=self.tol)[-1]
-                h_rnn[i + 1] = self.rnn(h_ode[i], x[i])
-            out = (h_rnn,)
-        else:
-            for i in range(n_t):
-                self.ode.update(t[i])
-                h_rnn[i] = self.rnn(h_ode[i], x[i])
-                h_ode[i + 1] = odeint(self.ode, h_rnn[i], self.t, atol=self.tol, rtol=self.tol)[-1]
-            out = (h_ode,)
-
-        if self.both:
-            out = (h_rnn, h_ode)
-
-        if multiforecast is not None:
-            self.ode.update(torch.ones_like((t[0])))
-            forecast = odeint(self.ode, out[-1][-1], multiforecast * 1.0, atol=self.tol, rtol=self.tol)
-            out = (*out, forecast)
 
         return out

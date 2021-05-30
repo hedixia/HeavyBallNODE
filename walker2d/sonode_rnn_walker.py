@@ -61,6 +61,7 @@ class MODEL(nn.Module):
 
 
 def main():
+    data = Walker2dImitationData(seq_len=seqlen, device=0)
     gradrec = None
     lr_dict = {0: 0.001, 50: 0.003}
     res = True

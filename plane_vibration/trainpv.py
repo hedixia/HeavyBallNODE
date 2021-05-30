@@ -3,7 +3,6 @@ from pvdat import pv
 
 seqlen = 64
 forelen = 8
-data = pv(input_len=seqlen, verbose=True, forecast_len=forelen)
 
 
 def fcriteria(a, b):
@@ -14,6 +13,7 @@ def fcriteria(a, b):
 
 
 def trainpv(model, fname, mname, niter=500, lr_dict=None, gradrec=None, pre_shrink=0.01):
+    data = pv(input_len=seqlen, verbose=True, forecast_len=forelen)
     lr_dict = {0: 0.001, 50: 0.0001} if lr_dict is None else lr_dict
     recorder = Recorder()
     torch.manual_seed(0)
