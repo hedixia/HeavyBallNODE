@@ -120,5 +120,5 @@ def main():
             rec['ts_loss'] = sloss
         rec.capture(verbose=True)
         if (epoch + 1) % 20 == 0:
-            torch.save(model, 'output/walker/{}_rnn_{}.mdl'.format(modelname, count_parameters(model)))
-            rec.writecsv('output/walker/{}_rnn_{}.csv'.format(modelname, count_parameters(model)))
+            torch.save(model, 'output/walker_{}_rnn_{}.mdl'.format(modelname, count_parameters(model)))
+            rec.writecsv('output/walker_{}_rnn_{}.csv'.format(modelname, count_parameters(model)))

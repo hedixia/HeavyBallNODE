@@ -78,5 +78,5 @@ class MODEL(nn.Module):
 def main():
     model = MODEL()
     model.load_state_dict(torch.load('output/pv_anode_rnn.mdl'))
-    trainpv(model, 'output/pv/log_an0_{}.csv'.format(count_parameters(model)), 'output/pv_anode_rnn.mdl', niter=40,
+    trainpv(model, 'output/pv_log_an0_{}.csv'.format(count_parameters(model)), 'output/pv_anode_rnn.mdl', niter=40,
             pre_shrink=1)

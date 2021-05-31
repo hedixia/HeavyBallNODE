@@ -67,4 +67,4 @@ class MODEL(nn.Module):
 
 def main():
     model = MODEL()
-    trainpv(model, 'output/pv/log_hb0_{}.csv'.format(count_parameters(model)), 'output/pv_hbnode_rnn.mdl')
+    trainpv(model, 'output/pv_log_hb0_{}.csv'.format(count_parameters(model)), 'output/pv_hbnode_rnn.mdl')
