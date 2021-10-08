@@ -1,7 +1,8 @@
 # Heavy Ball Neural Ordinary Differential Equations
 
 This is the official implementation of Heavy Ball Neural Ordinary Differential Equations. 
-It is based on Pytorch and torchdiffeq, and all numerical solvers used are dopri5.
+For any questions about the code, please correspond to hedixia@ucla.edu.
+The code is based on Pytorch and torchdiffeq, and all default numerical solvers used in the experiments are dopri5.
 
 ## Usage
 
@@ -12,25 +13,25 @@ Usage:
 
 First create a NODE type module by 
 
-cell = NODE(...)
+`cell = NODE(...)`
 
 Or a HBNODE by 
 
-cell = HBNODE(...)
+`cell = HBNODE(...)`
 
 And turn it into a time series model by 
 
-model = NODEintegrate(cell)
+`model = NODEintegrate(cell)`
 
 It can also be used as a residual network analogy by
 
-model = NODElayer(cell)
+`model = NODElayer(cell)`
 
 For NODE-RNN type hybrids, use 
 
-model = ODE_RNN(ode, cell, nhid, ic)
+`model = ODE_RNN(ode, cell, nhid, ic)`
 
-here nhid is the hidden shape (same shape as ode / cell input and output). ic is the initial conditions.
+here `nhid` is the hidden shape (same shape as ode / cell input and output). `ic` is the initial conditions.
 
 
 ## Experiments
