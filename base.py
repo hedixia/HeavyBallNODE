@@ -159,25 +159,22 @@ class SONODE(NODE):
 
 
 class HeavyBallNODE(NODE):
-    def __init__(self, df, actv_h=None, gamma_guess=-3.0, gamma_act='sigmoid', corr=-100, corrf=True):
+    def __init__(self, df, actv_h=None, gamma_guess=-3.0, gamma_act='sigmoid', corr=-100, corrf=True, sign=1):
         super().__init__(df)
         # Momentum parameter gamma
         self.gamma = Parameter([gamma_guess], frozen=False)
         self.gammaact = nn.Sigmoid() if gamma_act == 'sigmoid' else gamma_act
         self.corr = Parameter([corr], frozen=corrf)
         self.sp = nn.Softplus()
-        # Activation for dh, GHBNODE only
-        self.actv_h = nn.Identity() if actv_h is None else actv_h
+        self.sign = sign # Sign of df
+        self.actv_h = nn.Identity() if actv_h is None else actv_h # Activation for dh, GHBNODE only
 
     def forward(self, t, x):
         """
         Compute [theta' m' v'] with heavy ball parametrization in
-        $$ theta' = -m / sqrt(v + eps) $$
-        $$ m' = h f'(theta) - rm $$
-        $$ v' = p (f'(theta))^2 - qv $$
-        https://www.jmlr.org/papers/volume21/18-808/18-808.pdf
-        because v is constant, we change c -> 1/sqrt(v)
-        c has to be positive
+        $$ h' = -m $$
+        $$ m' = sign * df - gamma * m $$
+        based on paper https://www.jmlr.org/papers/volume21/18-808/18-808.pdf
         :param t: time, shape [1]
         :param x: [theta m], shape [batch, 2, dim]
         :return: [theta' m'], shape [batch, 2, dim]
@@ -185,7 +182,7 @@ class HeavyBallNODE(NODE):
         self.nfe += 1
         h, m = torch.split(x, 1, dim=1)
         dh = self.actv_h(- m)
-        dm = self.df(t, h) - self.gammaact(self.gamma()) * m
+        dm = self.df(t, h) * self.sign - self.gammaact(self.gamma()) * m
         dm = dm + self.sp(self.corr()) * h
         out = torch.cat((dh, dm), dim=1)
         if self.elem_t is None:
@@ -197,7 +194,7 @@ class HeavyBallNODE(NODE):
         self.elem_t = elem_t.view(*elem_t.shape, 1, 1)
 
 
-HBNODE = HeavyBallNODE
+HBNODE = HeavyBallNODE # Alias
 
 
 class ODE_RNN(nn.Module):
