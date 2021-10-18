@@ -6,6 +6,10 @@ The code is based on Pytorch and torchdiffeq, and all default numerical solvers 
 
 ## Usage
 
+Download walker2d data by 
+
+'python data_download.py'
+
 Data format shape: 
 [timestamps, batch, channels (derivatives), feature dimension]
 
